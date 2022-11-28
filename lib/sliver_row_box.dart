@@ -84,32 +84,60 @@ class SliverRowBoxState<T, I> extends State<SliverRowBox<T, I>>
   }
 
   checkAnimation() {
-    if (widget.visibleAnimated) {
-      if (animationController == null) {
-        maxItemsForAnimation = !widget.visible;
-        animationController = AnimationController(
-            value: widget.visible ? 1.0 : 0.0,
-            vsync: this,
-            duration: widget.duration);
-        enableAnimation = animationController!
-            .drive<double>(CurveTween(curve: Curves.easeInOut))
+    // if (widget.visibleAnimated) {
+    //   if (animationController == null) {
+    //     maxItemsForAnimation = !widget.visible;
+    //     animationController = AnimationController(
+    //         value: widget.visible ? 1.0 : 0.0,
+    //         vsync: this,
+    //         duration: widget.duration);
+    //     enableAnimation = animationController!
+    //         .drive<double>(CurveTween(curve: Curves.easeInOut))
+    //       ..addListener(() {
+    //         if ((enableAnimation!.value != 1.0) != maxItemsForAnimation) {
+    //           setState(() {
+    //             maxItemsForAnimation = !maxItemsForAnimation;
+    //           });
+    //         }
+    //       });
+    //   } else if (animationController?.duration != widget.duration) {
+    //     animationController?.duration = widget.duration;
+    //   }
+    // } else if (animationController != null) {
+    //   maxItemsForAnimation = false;
+    //   animationController?.dispose();
+    //   animationController = null;
+    //   enableAnimation = null;
+    // }
+  }
+
+  bool insertItems = false;
+
+  void animateInsert() {
+    insertItems = true;
+    animationController ??= animationController =
+        AnimationController(vsync: this, duration: widget.duration);
+
+    animationController?.value = 1.0;
+
+    enableAnimation =
+        animationController!.drive<double>(CurveTween(curve: Curves.easeInOut))
           ..addListener(() {
-            if ((enableAnimation!.value != 1.0) != maxItemsForAnimation) {
+            if (enableAnimation!.value == 0.0) {
               setState(() {
-                maxItemsForAnimation = !maxItemsForAnimation;
+                insertItems = false;
+              });
+            } else if (enableAnimation!.value == 1.0) {
+              setState(() {
+                maxItemsForAnimation = false;
               });
             }
           });
-      } else if (animationController?.duration != widget.duration) {
-        animationController?.duration = widget.duration;
-      }
-    } else if (animationController != null) {
-      maxItemsForAnimation = false;
-      animationController?.dispose();
-      animationController = null;
-      enableAnimation = null;
-    }
   }
+
+  bool get isAnimating => animationController?.isAnimating ?? false;
+
+  void animateRemove() {}
 
   verwijder(SliverBoxItemState state) {
     setState(() {
@@ -120,19 +148,65 @@ class SliverRowBoxState<T, I> extends State<SliverRowBox<T, I>>
   @override
   Widget build(BuildContext context) {
     RenderSliverList? r = context.findRenderObject() as RenderSliverList?;
+    double scrollOffset = r?.constraints.scrollOffset ?? 0.0;
+    double viewportHeight = r?.constraints.viewportMainAxisExtent ?? 0.0;
     debugPrint('geinig ${r?.constraints.scrollOffset}');
 
-    if (maxItemsForAnimation) {
-      if (r != null) {
-        final y = (r.parentData as SliverPhysicalParentData).paintOffset.dy;
-        final vieportHeight = r.constraints.viewportMainAxisExtent;
-        final height = vieportHeight * 1.25 - y;
-        maxItemsDuringAnimation = height ~/ widget.heightItem + 1;
+    final List<SliverBoxItemState> list = widget.itemList;
+    int count = list.length;
+    int i = 0;
+    double end = 75;
+    double correct = 0.0;
+    //AnimatedListState
+    while (i < count) {
+      final item = widget.itemList[i];
+      final itemHeight = 60.0;
+      bool removed = false;
+
+      if (end + itemHeight <= scrollOffset + correct) {
+        if (item.enabled) {
+          if (item.insertRemoveAnimation == 0.0) {
+            correct += itemHeight;
+            item.insertRemoveAnimation = 1.0;
+          }
+          end += itemHeight;
+        } else {
+          correct -= itemHeight;
+          list.removeAt(i);
+          removed = true;
+        }
+      } else if (end > scrollOffset + correct + viewportHeight) {
+        if (item.enabled) {
+          item.insertRemoveAnimation = 1.0;
+          end += itemHeight;
+        } else {
+          list.removeAt(i);
+          removed = true;
+        }
+      } else {
+        end += itemHeight;
       }
-      debugPrint('Maximum items during animation $maxItemsForAnimation');
-    } else {
-      maxItemsDuringAnimation = -1;
+
+      if (removed) {
+        count--;
+      } else {
+        i++;
+      }
     }
+
+    Scrollable.of(context)?.position.correctBy(correct);
+
+    // if (maxItemsForAnimation) {
+    //   if (r != null) {
+    //     final y = (r.parentData as SliverPhysicalParentData).paintOffset.dy;
+    //     final vieportHeight = r.constraints.viewportMainAxisExtent;
+    //     final height = vieportHeight * 1.25 - y;
+    //     maxItemsDuringAnimation = height ~/ widget.heightItem + 1;
+    //   }
+    //   debugPrint('Maximum items during animation $maxItemsForAnimation');
+    // } else {
+    //   maxItemsDuringAnimation = -1;
+    // }
 
     return SliverList(
         delegate: _SliverBoxRowSliverChildDelegate<T, I>(

@@ -8,7 +8,7 @@ class InsertRemoveVisibleAnimatedSliverRowItem extends StatelessWidget {
   final SliverBoxItemState state;
 
   const InsertRemoveVisibleAnimatedSliverRowItem({
-    Key? key,
+    required Key key,
     this.enableAnimation,
     required this.child,
     required this.state,

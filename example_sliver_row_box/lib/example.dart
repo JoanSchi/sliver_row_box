@@ -5,6 +5,8 @@ import 'package:sliver_row_box/sliver_item_row_insert_remove.dart';
 import 'package:sliver_row_box/sliver_row_box.dart';
 import 'package:sliver_row_box/sliver_row_item_background.dart';
 
+import 'bucket_list.dart';
+
 class TodoRowBox extends StatefulWidget {
   const TodoRowBox({super.key});
 
@@ -13,25 +15,24 @@ class TodoRowBox extends StatefulWidget {
 }
 
 class ToDo {
+  bool selected;
   String text;
-  int id;
 
   ToDo({
     required this.text,
-    required this.id,
+    this.selected = false,
   });
 }
 
 class _TodoRowBoxState extends State<TodoRowBox> {
-  List<SliverBoxItemState<ToDo>> todos = [
-    ToDo(text: 'Variable height', id: 0),
-    ToDo(text: ';)', id: 1)
-  ]
-      .map((t) => SliverBoxItemState<ToDo>(
-          key: '{t.id}', insertRemoveAnimation: 1.0, enabled: true, value: t))
-      .toList();
-
   int todoId = 0;
+  late List<SliverBoxItemState<ToDo>> todos = bucketList
+      .map((t) => SliverBoxItemState<ToDo>(
+          key: '${todoId++}',
+          insertRemoveAnimation: 1.0,
+          enabled: true,
+          value: ToDo(text: t)))
+      .toList();
 
   @override
   void initState() {
@@ -108,7 +109,7 @@ class _TodoRowBoxState extends State<TodoRowBox> {
 
     return Padding(
         padding: const EdgeInsets.symmetric(horizontal: 8.0),
-        child: SizedBox(width: 450, child: w));
+        child: Center(child: SizedBox(width: 450, height: 75, child: w)));
   }
 
   Widget _buildItem(
@@ -117,12 +118,13 @@ class _TodoRowBoxState extends State<TodoRowBox> {
       required int length,
       required SliverBoxItemState<ToDo> state}) {
     return InsertRemoveVisibleAnimatedSliverRowItem(
+        key: Key('item_${state.key}'),
         state: state,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 8.0),
           child: Center(
             child: SizedBox(
-              height: 56.0,
+              height: 60.0,
               width: 450,
               child: SliverRowItemBackground(
                   backgroundColor: Colors.blue[50],
@@ -130,22 +132,40 @@ class _TodoRowBoxState extends State<TodoRowBox> {
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       const SizedBox(
-                        width: 24.0,
+                        width: 8.0,
                       ),
-                      Text(
+                      Checkbox(
+                          value: state.value.selected,
+                          onChanged: (value) {
+                            setState(() {
+                              state.value.selected = value!;
+                            });
+                          }),
+                      const SizedBox(
+                        width: 8.0,
+                      ),
+                      Expanded(
+                          child: Text(
                         state.value.text,
                         style: const TextStyle(fontSize: 18.0),
-                      ),
-                      const Expanded(
-                        child: SizedBox.expand(),
-                      ),
+                      )),
                       IconButton(
                           onPressed: () {
                             setState(() {
-                              state.enabled = false;
+                              int i = 0;
+                              for (var st in todos) {
+                                if (st.value.selected) {
+                                  st.enabled = false;
+                                  i++;
+                                }
+                              }
+                              print('geselecteerd $i');
                             });
                           },
-                          icon: const Icon(Icons.delete))
+                          icon: const Icon(Icons.more_vert)),
+                      const SizedBox(
+                        width: 8.0,
+                      ),
                     ],
                   )),
             ),
@@ -159,7 +179,6 @@ class _TodoRowBoxState extends State<TodoRowBox> {
           key: '${todoId++}',
           value: ToDo(
             text: 'blub',
-            id: todoId,
           ),
           enabled: true,
           insertRemoveAnimation: 0.0));
