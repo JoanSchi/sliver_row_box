@@ -3,24 +3,28 @@ import 'package:sliver_row_box/sliver_row_box.dart';
 import 'package:sliver_row_box/src/scale_size_transition.dart';
 
 class InsertRemoveVisibleAnimatedSliverRowItem extends StatelessWidget {
-  final Animation? enableAnimation;
+  final Animation? animation;
   final Widget child;
   final SliverBoxItemState state;
 
   const InsertRemoveVisibleAnimatedSliverRowItem({
     required Key key,
-    this.enableAnimation,
+    this.animation,
     required this.child,
     required this.state,
   }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    final a = enableAnimation;
+    final a = animation;
 
-    if (a != null) {
+    if (state.single) {
+      return SingleSliverItemRowAnimation(
+        state: state,
+        child: child,
+      );
+    } else if (a != null) {
       return AnimatedBuilder(
-          key: Key('ea_${state.key}'),
           animation: a,
           child: child,
           builder: (BuildContext context, Widget? child) {
@@ -28,50 +32,54 @@ class InsertRemoveVisibleAnimatedSliverRowItem extends StatelessWidget {
             return ScaleResized(scale: scale, child: child);
           });
     } else {
-      return individual();
-    }
-  }
-
-  Widget individual() {
-    if (state.enabled && state.insertRemoveAnimation == 1.0) {
       return child;
-    } else {
-      return SliverItemRowAnimation(
-        key: Key('a_${state.key}'),
-        state: state,
-        child: child,
-      );
     }
   }
 }
 
-class SliverItemRowAnimation extends StatefulWidget {
+class MultiSliverItemRowAnimation extends AnimatedWidget {
+  final Widget child;
+
+  const MultiSliverItemRowAnimation({
+    super.key,
+    required super.listenable,
+    required this.child,
+  });
+
+  Animation<double> get _progress => listenable as Animation<double>;
+
+  @override
+  Widget build(BuildContext context) {
+    return ScaleResized(scale: _progress.value, child: child);
+  }
+}
+
+class SingleSliverItemRowAnimation extends StatefulWidget {
   final SliverBoxItemState state;
   final Widget child;
 
-  const SliverItemRowAnimation({
+  const SingleSliverItemRowAnimation({
     Key? key,
     required this.state,
     required this.child,
   }) : super(key: key);
 
   @override
-  State<SliverItemRowAnimation> createState() => _SliverItemRowAnimationState();
+  State<SingleSliverItemRowAnimation> createState() =>
+      _SingleSliverItemRowAnimationState();
 }
 
-class _SliverItemRowAnimationState extends State<SliverItemRowAnimation>
+class _SingleSliverItemRowAnimationState
+    extends State<SingleSliverItemRowAnimation>
     with SingleTickerProviderStateMixin {
   late AnimationController controller = AnimationController(
-      value: widget.state.insertRemoveAnimation,
+      value: widget.state.status == ItemStatusSliverBox.inserting ? 0.0 : 1.0,
       vsync: this,
       duration: const Duration(milliseconds: 200))
     ..addListener(() {
-      if (animation.value == 0.0 && !widget.state.enabled) {
-        SliverRowBox.of(context)?.verwijder(widget.state);
+      if (animation.value == 0.0) {
       } else {
-        setState(() {
-          widget.state.insertRemoveAnimation = animation.value;
-        });
+        setState(() {});
       }
     });
 
@@ -85,22 +93,29 @@ class _SliverItemRowAnimationState extends State<SliverItemRowAnimation>
   }
 
   @override
-  void didUpdateWidget(SliverItemRowAnimation oldWidget) {
+  void didUpdateWidget(SingleSliverItemRowAnimation oldWidget) {
     checkAnimation();
     super.didUpdateWidget(oldWidget);
   }
 
   checkAnimation() {
-    switch (widget.state.animationAction()) {
-      case AnimationStatus.forward:
-        controller.forward();
+    switch (widget.state.status) {
+      case ItemStatusSliverBox.inserting:
+        if (controller.status != AnimationStatus.forward) {
+          controller.forward().then((value) {
+            widget.state.single = false;
+          });
+        }
         break;
-      case AnimationStatus.reverse:
-        controller.reverse();
+
+      case ItemStatusSliverBox.remove:
+        if (controller.status != AnimationStatus.reverse) {
+          controller.reverse().then(
+              (value) => SliverRowBox.of(context)?.verwijder(widget.state));
+        }
         break;
       default:
         {}
-        break;
     }
   }
 
@@ -112,7 +127,6 @@ class _SliverItemRowAnimationState extends State<SliverItemRowAnimation>
 
   @override
   Widget build(BuildContext context) {
-    return ScaleResized(
-        scale: widget.state.insertRemoveAnimation, child: widget.child);
+    return ScaleResized(scale: controller.value, child: widget.child);
   }
 }

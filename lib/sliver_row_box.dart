@@ -1,8 +1,10 @@
+// ignore_for_file: public_member_api_docs, sort_constructors_first
 library sliver_row_box;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
-import 'src/scale_size_transition.dart';
+
+enum ItemStatusSliverBox { inserting, inserted, remove, insertLater }
 
 typedef BuildSliverBox<I> = Widget Function(
     {Animation? animation,
@@ -16,10 +18,7 @@ class SliverRowBox<T, I> extends StatefulWidget {
   final List<SliverBoxItemState<T>> bottomList;
   final BuildSliverBox<I> buildSliverBoxItem;
   final BuildSliverBox<T> buildSliverBoxTopBottom;
-  final bool visible;
-  final bool visibleAnimated;
-  final int maximumItems;
-  final double heightItem;
+  final bool tt;
   final EdgeInsets paddingItem;
   final Duration duration;
 
@@ -30,10 +29,7 @@ class SliverRowBox<T, I> extends StatefulWidget {
     required this.bottomList,
     required this.buildSliverBoxItem,
     required this.buildSliverBoxTopBottom,
-    this.visible = true,
-    this.visibleAnimated = false,
-    this.maximumItems = -1,
-    required this.heightItem,
+    this.tt = true,
     this.paddingItem = const EdgeInsets.symmetric(horizontal: 16.0),
     this.duration = const Duration(milliseconds: 300),
   }) : super(key: key);
@@ -48,10 +44,13 @@ class SliverRowBox<T, I> extends StatefulWidget {
 
 class SliverRowBoxState<T, I> extends State<SliverRowBox<T, I>>
     with SingleTickerProviderStateMixin {
-  AnimationController? animationController;
+  AnimationController? _animationController;
   Animation<double>? enableAnimation;
   bool maxItemsForAnimation = false;
   int maxItemsDuringAnimation = -1;
+
+  AnimationController get animationController => _animationController ??=
+      AnimationController(vsync: this, duration: widget.duration);
 
   @override
   void initState() {
@@ -60,84 +59,68 @@ class SliverRowBoxState<T, I> extends State<SliverRowBox<T, I>>
 
   @override
   void didChangeDependencies() {
-    checkAnimation();
     super.didChangeDependencies();
   }
 
   @override
   void didUpdateWidget(SliverRowBox<T, I> oldWidget) {
-    checkAnimation();
-    if (widget.visibleAnimated) {
-      if (widget.visible) {
-        animationController?.forward();
-      } else {
-        animationController?.reverse();
-      }
-    }
     super.didUpdateWidget(oldWidget);
   }
 
   @override
   void dispose() {
-    animationController?.dispose();
+    _animationController?.dispose();
     super.dispose();
   }
 
-  checkAnimation() {
-    // if (widget.visibleAnimated) {
-    //   if (animationController == null) {
-    //     maxItemsForAnimation = !widget.visible;
-    //     animationController = AnimationController(
-    //         value: widget.visible ? 1.0 : 0.0,
-    //         vsync: this,
-    //         duration: widget.duration);
-    //     enableAnimation = animationController!
-    //         .drive<double>(CurveTween(curve: Curves.easeInOut))
-    //       ..addListener(() {
-    //         if ((enableAnimation!.value != 1.0) != maxItemsForAnimation) {
-    //           setState(() {
-    //             maxItemsForAnimation = !maxItemsForAnimation;
-    //           });
-    //         }
-    //       });
-    //   } else if (animationController?.duration != widget.duration) {
-    //     animationController?.duration = widget.duration;
-    //   }
-    // } else if (animationController != null) {
-    //   maxItemsForAnimation = false;
-    //   animationController?.dispose();
-    //   animationController = null;
-    //   enableAnimation = null;
-    // }
-  }
-
-  bool insertItems = false;
-
   void animateInsert() {
-    insertItems = true;
-    animationController ??= animationController =
-        AnimationController(vsync: this, duration: widget.duration);
+    if (_evaluateState()) {
+      animationController.value = 0.0;
 
-    animationController?.value = 1.0;
+      enableAnimation = animationController
+        ..drive<double>(CurveTween(curve: Curves.easeInOut));
 
-    enableAnimation =
-        animationController!.drive<double>(CurveTween(curve: Curves.easeInOut))
-          ..addListener(() {
-            if (enableAnimation!.value == 0.0) {
-              setState(() {
-                insertItems = false;
-              });
-            } else if (enableAnimation!.value == 1.0) {
-              setState(() {
-                maxItemsForAnimation = false;
-              });
-            }
+      animationController.forward().then((value) {
+        // animationController.removeListener(insertListener);
+        for (SliverBoxItemState s in widget.itemList) {
+          if (s.status == ItemStatusSliverBox.inserting) {
+            s.status = ItemStatusSliverBox.inserted;
+          }
+        }
+        if (mounted) {
+          setState(() {
+            maxItemsForAnimation = false;
           });
+        }
+      });
+    }
+
+    setState(() {});
   }
 
-  bool get isAnimating => animationController?.isAnimating ?? false;
+  void animateRemove() {
+    if (_evaluateState()) {
+      animationController.value = 1.0;
 
-  void animateRemove() {}
+      enableAnimation = animationController
+        ..drive<double>(CurveTween(curve: Curves.easeInOut));
+
+      animationController.reverse().then((value) {
+        debugPrint('then Reverse value');
+
+        widget.itemList.removeWhere((SliverBoxItemState element) =>
+            !element.single && element.status == ItemStatusSliverBox.remove);
+
+        if (mounted && animationController.isDismissed) {
+          setState(() {});
+        }
+      });
+    }
+
+    setState(() {});
+  }
+
+  bool get isAnimating => _animationController?.isAnimating ?? false;
 
   verwijder(SliverBoxItemState state) {
     setState(() {
@@ -147,55 +130,6 @@ class SliverRowBoxState<T, I> extends State<SliverRowBox<T, I>>
 
   @override
   Widget build(BuildContext context) {
-    RenderSliverList? r = context.findRenderObject() as RenderSliverList?;
-    double scrollOffset = r?.constraints.scrollOffset ?? 0.0;
-    double viewportHeight = r?.constraints.viewportMainAxisExtent ?? 0.0;
-    debugPrint('geinig ${r?.constraints.scrollOffset}');
-
-    final List<SliverBoxItemState> list = widget.itemList;
-    int count = list.length;
-    int i = 0;
-    double end = 75;
-    double correct = 0.0;
-    //AnimatedListState
-    while (i < count) {
-      final item = widget.itemList[i];
-      final itemHeight = 60.0;
-      bool removed = false;
-
-      if (end + itemHeight <= scrollOffset + correct) {
-        if (item.enabled) {
-          if (item.insertRemoveAnimation == 0.0) {
-            correct += itemHeight;
-            item.insertRemoveAnimation = 1.0;
-          }
-          end += itemHeight;
-        } else {
-          correct -= itemHeight;
-          list.removeAt(i);
-          removed = true;
-        }
-      } else if (end > scrollOffset + correct + viewportHeight) {
-        if (item.enabled) {
-          item.insertRemoveAnimation = 1.0;
-          end += itemHeight;
-        } else {
-          list.removeAt(i);
-          removed = true;
-        }
-      } else {
-        end += itemHeight;
-      }
-
-      if (removed) {
-        count--;
-      } else {
-        i++;
-      }
-    }
-
-    Scrollable.of(context)?.position.correctBy(correct);
-
     // if (maxItemsForAnimation) {
     //   if (r != null) {
     //     final y = (r.parentData as SliverPhysicalParentData).paintOffset.dy;
@@ -219,13 +153,128 @@ class SliverRowBoxState<T, I> extends State<SliverRowBox<T, I>>
     ));
   }
 
+  _evaluateState() {
+    RenderSliverList? r = context.findRenderObject() as RenderSliverList?;
+    double scrollOffset = r?.constraints.scrollOffset ?? 0.0;
+    double viewportHeight = r?.constraints.viewportMainAxisExtent ?? 0.0;
+    debugPrint('geinig ${r?.constraints.scrollOffset}');
+    double additionalHeight = 0.0;
+
+    bool animationVisible = false;
+
+    final List<SliverBoxItemState> list = widget.itemList;
+    int count = list.length;
+    int i = 0;
+    double end = 0.0;
+
+    for (SliverBoxItemState s in widget.topList) {
+      end += s.height;
+    }
+
+    double correct = 0.0;
+
+    while (i < count) {
+      final item = widget.itemList[i];
+      final itemHeight = item.height;
+      bool removed = false;
+
+      if (end + itemHeight <= scrollOffset + correct) {
+        switch (item.status) {
+          case ItemStatusSliverBox.insertLater:
+          case ItemStatusSliverBox.inserting:
+            {
+              item.status = ItemStatusSliverBox.inserted;
+              correct += itemHeight;
+              end += itemHeight;
+
+              break;
+            }
+          case ItemStatusSliverBox.inserted:
+            {
+              end += itemHeight;
+              break;
+            }
+          case ItemStatusSliverBox.remove:
+            {
+              correct -= itemHeight;
+              list.removeAt(i);
+              removed = true;
+              break;
+            }
+        }
+      } else if (end > scrollOffset + correct + viewportHeight) {
+        switch (item.status) {
+          case ItemStatusSliverBox.insertLater:
+          case ItemStatusSliverBox.inserting:
+            {
+              item.status = ItemStatusSliverBox.inserted;
+              end += itemHeight;
+              break;
+            }
+          case ItemStatusSliverBox.inserted:
+            {
+              end += itemHeight;
+              break;
+            }
+          case ItemStatusSliverBox.remove:
+            {
+              list.removeAt(i);
+              removed = true;
+              break;
+            }
+        }
+      } else {
+        if (item.status == ItemStatusSliverBox.inserting) {
+          if (end + additionalHeight >
+              scrollOffset + correct + viewportHeight) {
+            item.status = ItemStatusSliverBox.insertLater;
+          }
+          additionalHeight += itemHeight;
+          animationVisible = true;
+        } else if (item.status == ItemStatusSliverBox.remove) {
+          end += itemHeight;
+          animationVisible = true;
+        } else {
+          end += itemHeight;
+        }
+      }
+
+      if (removed) {
+        count--;
+      } else {
+        i++;
+      }
+    }
+
+    if (correct != 0.0) {
+      final position = Scrollable.of(context)?.position;
+
+      if (position != null) {
+        position.correctBy(correct);
+
+        position.animateTo(position.pixels + (correct > 0.0 ? -30 : 30),
+            duration: const Duration(milliseconds: 500),
+            curve: Curves.easeInOut);
+      }
+    }
+
+    return animationVisible;
+  }
+
   Widget _buildItem(
       {required BuildContext context,
       required SliverBoxItemState<I> state,
       required int index,
       required int length}) {
+    var a = enableAnimation;
+
+    a = (!state.single && (state.status == ItemStatusSliverBox.inserting) ||
+            state.status == ItemStatusSliverBox.remove)
+        ? a
+        : null;
+
     return widget.buildSliverBoxItem(
-        index: index, length: length, state: state, animation: enableAnimation);
+        index: index, length: length, state: state, animation: a);
   }
 
   Widget _buildTopBottom(
@@ -234,7 +283,7 @@ class SliverRowBoxState<T, I> extends State<SliverRowBox<T, I>>
       required int index,
       required int length}) {
     return widget.buildSliverBoxTopBottom(
-        animation: enableAnimation, index: index, length: length, state: state);
+        index: index, length: length, state: state);
   }
 }
 
@@ -265,6 +314,8 @@ class _SliverBoxRowSliverChildDelegate<T, I> extends SliverChildDelegate {
     required this.maxItemsDuringAnimation,
   });
 
+  int skip = 0;
+
   @override
   Widget? build(BuildContext context, int index) {
     final topLength = topList.length;
@@ -275,9 +326,9 @@ class _SliverBoxRowSliverChildDelegate<T, I> extends SliverChildDelegate {
       return null;
     }
 
-    if (maxItemsDuringAnimation != -1 && itemLength > maxItemsDuringAnimation) {
-      itemLength = maxItemsDuringAnimation;
-    }
+    // if (maxItemsDuringAnimation != -1 && itemLength > maxItemsDuringAnimation) {
+    //   itemLength = maxItemsDuringAnimation;
+    // }
 
     if (index < topLength) {
       return buildTopBottom(
@@ -289,15 +340,19 @@ class _SliverBoxRowSliverChildDelegate<T, I> extends SliverChildDelegate {
 
     index -= topLength;
 
-    if (index < itemLength) {
-      return buildItem(
-          context: context,
-          state: itemList[index],
-          index: index,
-          length: itemLength);
+    while (index + skip < itemLength) {
+      if (itemList[index].status == ItemStatusSliverBox.insertLater) {
+        skip++;
+      } else {
+        return buildItem(
+            context: context,
+            state: itemList[index + skip],
+            index: index + skip,
+            length: itemLength);
+      }
     }
 
-    index -= itemLength;
+    index -= itemLength + skip;
 
     if (index < bottomLength) {
       return buildTopBottom(
@@ -312,7 +367,7 @@ class _SliverBoxRowSliverChildDelegate<T, I> extends SliverChildDelegate {
 
   @override
   int? get estimatedChildCount =>
-      topList.length + itemList.length + bottomList.length;
+      topList.length + itemList.length - skip + bottomList.length;
 
   @override
   bool shouldRebuild(SliverChildDelegate oldDelegate) {
@@ -320,53 +375,18 @@ class _SliverBoxRowSliverChildDelegate<T, I> extends SliverChildDelegate {
   }
 }
 
-// class VisibleAnimatedSliverRowItem extends StatelessWidget {
-//   final Animation? enableAnimation;
-//   final Widget child;
-
-//   const VisibleAnimatedSliverRowItem({
-//     Key? key,
-//     this.enableAnimation,
-//     required this.child,
-//   }) : super(key: key);
-
-//   @override
-//   Widget build(BuildContext context) {
-//     final a = enableAnimation;
-
-//     if (a != null) {
-//       return AnimatedBuilder(
-//           animation: a,
-//           child: child,
-//           builder: (BuildContext context, Widget? child) => a.value == 0.0
-//               ? const SizedBox.shrink()
-//               : ScaleResized(scale: a.value, child: child));
-//     } else {
-//       return child;
-//     }
-//   }
-// }
-
 class SliverBoxItemState<T> {
-  double insertRemoveAnimation;
+  ItemStatusSliverBox status;
+  bool single;
   T value;
-  bool enabled;
   String key;
+  double height;
 
   SliverBoxItemState({
-    required this.key,
-    required this.insertRemoveAnimation,
+    required this.status,
+    required this.single,
     required this.value,
-    required this.enabled,
+    required this.key,
+    required this.height,
   });
-
-  AnimationStatus animationAction() {
-    if (enabled && insertRemoveAnimation != 1.0) {
-      return AnimationStatus.forward;
-    } else if (!enabled && insertRemoveAnimation != 0.0) {
-      return AnimationStatus.reverse;
-    } else {
-      return AnimationStatus.completed;
-    }
-  }
 }

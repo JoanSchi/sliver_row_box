@@ -25,12 +25,15 @@ class ToDo {
 }
 
 class _TodoRowBoxState extends State<TodoRowBox> {
+  final globalKey =
+      const GlobalObjectKey<SliverRowBoxState>('SliverRowBox_bucketlist');
   int todoId = 0;
   late List<SliverBoxItemState<ToDo>> todos = bucketList
       .map((t) => SliverBoxItemState<ToDo>(
+          height: 60.0,
           key: '${todoId++}',
-          insertRemoveAnimation: 1.0,
-          enabled: true,
+          status: ItemStatusSliverBox.inserted,
+          single: false,
           value: ToDo(text: t)))
       .toList();
 
@@ -43,26 +46,27 @@ class _TodoRowBoxState extends State<TodoRowBox> {
   @override
   Widget build(BuildContext context) {
     return SliverRowBox<String, ToDo>(
-        visibleAnimated: true,
-        visible: false,
-        topList: [
-          SliverBoxItemState(
-              key: 'Todo',
-              insertRemoveAnimation: 1.0,
-              value: 'Todo',
-              enabled: true)
-        ],
-        itemList: todos,
-        bottomList: [
-          SliverBoxItemState(
-              key: 'bottom',
-              insertRemoveAnimation: 1.0,
-              value: 'bottom',
-              enabled: true)
-        ],
-        buildSliverBoxItem: _buildItem,
-        buildSliverBoxTopBottom: _buildTop,
-        heightItem: 75);
+      key: globalKey,
+      topList: [
+        SliverBoxItemState(
+            height: 75.0,
+            key: 'Todo',
+            value: 'Todo',
+            status: ItemStatusSliverBox.inserted,
+            single: false)
+      ],
+      itemList: todos,
+      bottomList: [
+        SliverBoxItemState(
+            height: 75.0,
+            key: 'bottom',
+            value: 'bottom',
+            status: ItemStatusSliverBox.inserted,
+            single: false)
+      ],
+      buildSliverBoxItem: _buildItem,
+      buildSliverBoxTopBottom: _buildTop,
+    );
   }
 
   Widget _buildTop(
@@ -109,7 +113,8 @@ class _TodoRowBoxState extends State<TodoRowBox> {
 
     return Padding(
         padding: const EdgeInsets.symmetric(horizontal: 8.0),
-        child: Center(child: SizedBox(width: 450, height: 75, child: w)));
+        child: Center(
+            child: SizedBox(width: 450, height: state.height, child: w)));
   }
 
   Widget _buildItem(
@@ -118,13 +123,14 @@ class _TodoRowBoxState extends State<TodoRowBox> {
       required int length,
       required SliverBoxItemState<ToDo> state}) {
     return InsertRemoveVisibleAnimatedSliverRowItem(
+        animation: animation,
         key: Key('item_${state.key}'),
         state: state,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 8.0),
           child: Center(
             child: SizedBox(
-              height: 60.0,
+              height: state.height,
               width: 450,
               child: SliverRowItemBackground(
                   backgroundColor: Colors.blue[50],
@@ -151,16 +157,12 @@ class _TodoRowBoxState extends State<TodoRowBox> {
                       )),
                       IconButton(
                           onPressed: () {
-                            setState(() {
-                              int i = 0;
-                              for (var st in todos) {
-                                if (st.value.selected) {
-                                  st.enabled = false;
-                                  i++;
-                                }
+                            for (var st in todos) {
+                              if (st.value.selected) {
+                                st.status = ItemStatusSliverBox.remove;
                               }
-                              print('geselecteerd $i');
-                            });
+                            }
+                            globalKey.currentState?.animateRemove();
                           },
                           icon: const Icon(Icons.more_vert)),
                       const SizedBox(
@@ -174,14 +176,14 @@ class _TodoRowBoxState extends State<TodoRowBox> {
   }
 
   void add() {
-    setState(() {
-      todos.add(SliverBoxItemState<ToDo>(
-          key: '${todoId++}',
-          value: ToDo(
-            text: 'blub',
-          ),
-          enabled: true,
-          insertRemoveAnimation: 0.0));
-    });
+    todos.add(SliverBoxItemState<ToDo>(
+        height: 60.0,
+        key: '${todoId++}',
+        value: ToDo(
+          text: 'blub',
+        ),
+        status: ItemStatusSliverBox.inserting,
+        single: false));
+    globalKey.currentState?.animateInsert();
   }
 }
