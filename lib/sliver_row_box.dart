@@ -83,7 +83,8 @@ class SliverRowBoxState<T, I> extends State<SliverRowBox<T, I>>
       animationController.forward().then((value) {
         // animationController.removeListener(insertListener);
         for (SliverBoxItemState s in widget.itemList) {
-          if (s.status == ItemStatusSliverBox.inserting) {
+          if (s.status == ItemStatusSliverBox.inserting ||
+              s.status == ItemStatusSliverBox.insertLater) {
             s.status = ItemStatusSliverBox.inserted;
           }
         }

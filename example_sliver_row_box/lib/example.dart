@@ -1,5 +1,4 @@
 // ignore_for_file: public_member_api_docs, sort_constructors_first
-
 import 'package:flutter/material.dart';
 import 'package:sliver_row_box/sliver_item_row_insert_remove.dart';
 import 'package:sliver_row_box/sliver_row_box.dart';
@@ -122,57 +121,60 @@ class _TodoRowBoxState extends State<TodoRowBox> {
       required int index,
       required int length,
       required SliverBoxItemState<ToDo> state}) {
-    return InsertRemoveVisibleAnimatedSliverRowItem(
-        animation: animation,
-        key: Key('item_${state.key}'),
-        state: state,
+    return Center(
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8.0),
-          child: Center(
+      padding: const EdgeInsets.symmetric(horizontal: 8.0),
+      child: SizedBox(
+        width: 450,
+        child: SliverRowItemBackground(
+          backgroundColor: Colors.blue[50],
+          child: InsertRemoveVisibleAnimatedSliverRowItem(
+            animation: animation,
+            key: Key('item_${state.key}'),
+            state: state,
             child: SizedBox(
-              height: state.height,
-              width: 450,
-              child: SliverRowItemBackground(
-                  backgroundColor: Colors.blue[50],
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      const SizedBox(
-                        width: 8.0,
-                      ),
-                      Checkbox(
-                          value: state.value.selected,
-                          onChanged: (value) {
-                            setState(() {
-                              state.value.selected = value!;
-                            });
-                          }),
-                      const SizedBox(
-                        width: 8.0,
-                      ),
-                      Expanded(
-                          child: Text(
-                        state.value.text,
-                        style: const TextStyle(fontSize: 18.0),
-                      )),
-                      IconButton(
-                          onPressed: () {
-                            for (var st in todos) {
-                              if (st.value.selected) {
-                                st.status = ItemStatusSliverBox.remove;
-                              }
-                            }
-                            globalKey.currentState?.animateRemove();
-                          },
-                          icon: const Icon(Icons.more_vert)),
-                      const SizedBox(
-                        width: 8.0,
-                      ),
-                    ],
-                  )),
-            ),
+                height: state.height,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    const SizedBox(
+                      width: 8.0,
+                    ),
+                    Checkbox(
+                        value: state.value.selected,
+                        onChanged: (value) {
+                          setState(() {
+                            state.value.selected = value!;
+                          });
+                        }),
+                    const SizedBox(
+                      width: 8.0,
+                    ),
+                    Expanded(
+                        child: Text(
+                      state.value.text,
+                      style: const TextStyle(fontSize: 18.0),
+                    )),
+                    popupMenuItem(state),
+                    // IconButton(
+                    //     onPressed: () {
+                    //       for (var st in todos) {
+                    //         if (st.value.selected) {
+                    //           st.status = ItemStatusSliverBox.remove;
+                    //         }
+                    //       }
+                    //       globalKey.currentState?.animateRemove();
+                    //     },
+                    //     icon: const Icon(Icons.more_vert)),
+                    const SizedBox(
+                      width: 8.0,
+                    ),
+                  ],
+                )),
           ),
-        ));
+        ),
+      ),
+    ));
   }
 
   void add() {
@@ -186,4 +188,62 @@ class _TodoRowBoxState extends State<TodoRowBox> {
         single: false));
     globalKey.currentState?.animateInsert();
   }
+
+  popupMenuItem(SliverBoxItemState<ToDo> state) {
+    return PopupMenuButton<MenuSingleItem>(
+        // Callback that sets the selected popup menu item.
+        onSelected: (MenuSingleItem item) {
+          switch (item) {
+            case MenuSingleItem.add:
+              {
+                int index = todos.indexOf(state);
+                todos.insert(
+                    index,
+                    SliverBoxItemState<ToDo>(
+                        single: false,
+                        key: '${todoId++}',
+                        status: ItemStatusSliverBox.inserting,
+                        height: 60.0,
+                        value: ToDo(text: 'hiep')));
+                globalKey.currentState?.animateInsert();
+                break;
+              }
+            case MenuSingleItem.remove:
+              {
+                state.status = ItemStatusSliverBox.remove;
+                globalKey.currentState?.animateRemove();
+                break;
+              }
+            case MenuSingleItem.removeSelected:
+              {
+                for (SliverBoxItemState<ToDo> s in todos) {
+                  if (s.value.selected) {
+                    s.status = ItemStatusSliverBox.remove;
+                  }
+                }
+                globalKey.currentState?.animateRemove();
+              }
+          }
+        },
+        itemBuilder: (BuildContext context) => <PopupMenuEntry<MenuSingleItem>>[
+              const PopupMenuItem<MenuSingleItem>(
+                value: MenuSingleItem.add,
+                child: Text('add'),
+              ),
+              const PopupMenuItem<MenuSingleItem>(
+                value: MenuSingleItem.remove,
+                child: Text('remove'),
+              ),
+              const PopupMenuItem<MenuSingleItem>(
+                value: MenuSingleItem.removeSelected,
+                child: Text('remove selected'),
+              ),
+            ]);
+  }
+}
+
+enum MenuSingleItem {
+  add,
+  remove,
+  removeSelected,
 }

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-
 import 'example.dart';
 
 void main() {
@@ -40,11 +39,11 @@ class _MyHomePageState extends State<MyHomePage> {
         title: Text(widget.title),
       ),
       body: const CustomScrollView(
-        slivers: [SliverToBoxAdapter(child: Text('gek2')), TodoRowBox()],
+        slivers: [TodoRowBox()],
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {},
-        tooltip: 'Increment',
+        tooltip: 'Add items',
         child: const Icon(Icons.add),
       ), // This trailing comma makes auto-formatting nicer for build methods.
     );
