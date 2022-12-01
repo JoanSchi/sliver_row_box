@@ -73,7 +73,7 @@ class _SingleSliverItemRowAnimationState
     extends State<SingleSliverItemRowAnimation>
     with SingleTickerProviderStateMixin {
   late AnimationController controller = AnimationController(
-      value: widget.state.status == ItemStatusSliverBox.inserting ? 0.0 : 1.0,
+      value: widget.state.status == ItemStatusSliverBox.insert ? 0.0 : 1.0,
       vsync: this,
       duration: const Duration(milliseconds: 200))
     ..addListener(() {
@@ -100,7 +100,7 @@ class _SingleSliverItemRowAnimationState
 
   checkAnimation() {
     switch (widget.state.status) {
-      case ItemStatusSliverBox.inserting:
+      case ItemStatusSliverBox.insert:
         if (controller.status != AnimationStatus.forward) {
           controller.forward().then((value) {
             widget.state.single = false;

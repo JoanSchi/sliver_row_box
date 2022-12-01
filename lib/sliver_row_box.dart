@@ -4,7 +4,9 @@ library sliver_row_box;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 
-enum ItemStatusSliverBox { inserting, inserted, remove, insertLater }
+enum ItemStatusSliverBox { insert, completed, remove, insertLater }
+
+enum SliverBoxAction { insert, remove, nothing }
 
 typedef BuildSliverBox<I> = Widget Function(
     {Animation? animation,
@@ -18,9 +20,9 @@ class SliverRowBox<T, I> extends StatefulWidget {
   final List<SliverBoxItemState<T>> bottomList;
   final BuildSliverBox<I> buildSliverBoxItem;
   final BuildSliverBox<T> buildSliverBoxTopBottom;
-  final bool tt;
   final EdgeInsets paddingItem;
   final Duration duration;
+  final SliverBoxAction sliverBoxAction;
 
   const SliverRowBox({
     Key? key,
@@ -29,7 +31,7 @@ class SliverRowBox<T, I> extends StatefulWidget {
     required this.bottomList,
     required this.buildSliverBoxItem,
     required this.buildSliverBoxTopBottom,
-    this.tt = true,
+    this.sliverBoxAction = SliverBoxAction.nothing,
     this.paddingItem = const EdgeInsets.symmetric(horizontal: 16.0),
     this.duration = const Duration(milliseconds: 300),
   }) : super(key: key);
@@ -64,6 +66,11 @@ class SliverRowBoxState<T, I> extends State<SliverRowBox<T, I>>
 
   @override
   void didUpdateWidget(SliverRowBox<T, I> oldWidget) {
+    if (widget.sliverBoxAction == SliverBoxAction.insert) {
+      animateInsert();
+    } else if (widget.sliverBoxAction == SliverBoxAction.remove) {
+      animateRemove();
+    }
     super.didUpdateWidget(oldWidget);
   }
 
@@ -83,9 +90,9 @@ class SliverRowBoxState<T, I> extends State<SliverRowBox<T, I>>
       animationController.forward().then((value) {
         // animationController.removeListener(insertListener);
         for (SliverBoxItemState s in widget.itemList) {
-          if (s.status == ItemStatusSliverBox.inserting ||
+          if (s.status == ItemStatusSliverBox.insert ||
               s.status == ItemStatusSliverBox.insertLater) {
-            s.status = ItemStatusSliverBox.inserted;
+            s.status = ItemStatusSliverBox.completed;
           }
         }
         if (mounted) {
@@ -182,15 +189,15 @@ class SliverRowBoxState<T, I> extends State<SliverRowBox<T, I>>
       if (end + itemHeight <= scrollOffset + correct) {
         switch (item.status) {
           case ItemStatusSliverBox.insertLater:
-          case ItemStatusSliverBox.inserting:
+          case ItemStatusSliverBox.insert:
             {
-              item.status = ItemStatusSliverBox.inserted;
+              item.status = ItemStatusSliverBox.completed;
               correct += itemHeight;
               end += itemHeight;
 
               break;
             }
-          case ItemStatusSliverBox.inserted:
+          case ItemStatusSliverBox.completed:
             {
               end += itemHeight;
               break;
@@ -206,13 +213,13 @@ class SliverRowBoxState<T, I> extends State<SliverRowBox<T, I>>
       } else if (end > scrollOffset + correct + viewportHeight) {
         switch (item.status) {
           case ItemStatusSliverBox.insertLater:
-          case ItemStatusSliverBox.inserting:
+          case ItemStatusSliverBox.insert:
             {
-              item.status = ItemStatusSliverBox.inserted;
+              item.status = ItemStatusSliverBox.completed;
               end += itemHeight;
               break;
             }
-          case ItemStatusSliverBox.inserted:
+          case ItemStatusSliverBox.completed:
             {
               end += itemHeight;
               break;
@@ -225,7 +232,7 @@ class SliverRowBoxState<T, I> extends State<SliverRowBox<T, I>>
             }
         }
       } else {
-        if (item.status == ItemStatusSliverBox.inserting) {
+        if (item.status == ItemStatusSliverBox.insert) {
           if (end + additionalHeight >
               scrollOffset + correct + viewportHeight) {
             item.status = ItemStatusSliverBox.insertLater;
@@ -269,7 +276,7 @@ class SliverRowBoxState<T, I> extends State<SliverRowBox<T, I>>
       required int length}) {
     var a = enableAnimation;
 
-    a = (!state.single && (state.status == ItemStatusSliverBox.inserting) ||
+    a = (!state.single && (state.status == ItemStatusSliverBox.insert) ||
             state.status == ItemStatusSliverBox.remove)
         ? a
         : null;
@@ -384,8 +391,8 @@ class SliverBoxItemState<T> {
   double height;
 
   SliverBoxItemState({
-    required this.status,
-    required this.single,
+    this.status = ItemStatusSliverBox.completed,
+    this.single = false,
     required this.value,
     required this.key,
     required this.height,

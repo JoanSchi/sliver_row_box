@@ -1,66 +1,49 @@
 // ignore_for_file: public_member_api_docs, sort_constructors_first
+import 'package:example_sliver_row_box/state.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sliver_row_box/sliver_item_row_insert_remove.dart';
 import 'package:sliver_row_box/sliver_row_box.dart';
 import 'package:sliver_row_box/sliver_row_item_background.dart';
 
-import 'bucket_list.dart';
-
-class TodoRowBox extends StatefulWidget {
+class TodoRowBox extends ConsumerStatefulWidget {
   const TodoRowBox({super.key});
 
   @override
-  State<TodoRowBox> createState() => _TodoRowBoxState();
+  ConsumerState<TodoRowBox> createState() => _TodoRowBoxState();
 }
 
-class ToDo {
-  bool selected;
-  String text;
-
-  ToDo({
-    required this.text,
-    this.selected = false,
-  });
-}
-
-class _TodoRowBoxState extends State<TodoRowBox> {
+class _TodoRowBoxState extends ConsumerState<TodoRowBox> {
   final globalKey =
       const GlobalObjectKey<SliverRowBoxState>('SliverRowBox_bucketlist');
-  int todoId = 0;
-  late List<SliverBoxItemState<ToDo>> todos = bucketList
-      .map((t) => SliverBoxItemState<ToDo>(
-          height: 60.0,
-          key: '${todoId++}',
-          status: ItemStatusSliverBox.inserted,
-          single: false,
-          value: ToDo(text: t)))
-      .toList();
 
   @override
   void initState() {
-    todoId = todos.length;
     super.initState();
   }
 
   @override
   Widget build(BuildContext context) {
-    return SliverRowBox<String, ToDo>(
+    final animalBox = ref.watch(animalBoxProvider);
+
+    return SliverRowBox<String, Animal>(
       key: globalKey,
+      sliverBoxAction: animalBox.consumeAction(),
       topList: [
         SliverBoxItemState(
             height: 75.0,
             key: 'Todo',
             value: 'Todo',
-            status: ItemStatusSliverBox.inserted,
+            status: ItemStatusSliverBox.completed,
             single: false)
       ],
-      itemList: todos,
+      itemList: animalBox.selected,
       bottomList: [
         SliverBoxItemState(
             height: 75.0,
             key: 'bottom',
             value: 'bottom',
-            status: ItemStatusSliverBox.inserted,
+            status: ItemStatusSliverBox.completed,
             single: false)
       ],
       buildSliverBoxItem: _buildItem,
@@ -120,7 +103,7 @@ class _TodoRowBoxState extends State<TodoRowBox> {
       {Animation? animation,
       required int index,
       required int length,
-      required SliverBoxItemState<ToDo> state}) {
+      required SliverBoxItemState<Animal> state}) {
     return Center(
         child: Padding(
       padding: const EdgeInsets.symmetric(horizontal: 8.0),
@@ -152,7 +135,7 @@ class _TodoRowBoxState extends State<TodoRowBox> {
                     ),
                     Expanded(
                         child: Text(
-                      state.value.text,
+                      state.value.name,
                       style: const TextStyle(fontSize: 18.0),
                     )),
                     popupMenuItem(state),
@@ -178,34 +161,34 @@ class _TodoRowBoxState extends State<TodoRowBox> {
   }
 
   void add() {
-    todos.add(SliverBoxItemState<ToDo>(
-        height: 60.0,
-        key: '${todoId++}',
-        value: ToDo(
-          text: 'blub',
-        ),
-        status: ItemStatusSliverBox.inserting,
-        single: false));
-    globalKey.currentState?.animateInsert();
+    // todos.add(SliverBoxItemState<ToDo>(
+    //     height: 60.0,
+    //     key: '${todoId++}',
+    //     value: ToDo(
+    //       name: 'blub',
+    //     ),
+    //     status: ItemStatusSliverBox.insert,
+    //     single: false));
+    // globalKey.currentState?.animateInsert();
   }
 
-  popupMenuItem(SliverBoxItemState<ToDo> state) {
+  popupMenuItem(SliverBoxItemState<Animal> state) {
     return PopupMenuButton<MenuSingleItem>(
         // Callback that sets the selected popup menu item.
         onSelected: (MenuSingleItem item) {
           switch (item) {
             case MenuSingleItem.add:
               {
-                int index = todos.indexOf(state);
-                todos.insert(
-                    index,
-                    SliverBoxItemState<ToDo>(
-                        single: false,
-                        key: '${todoId++}',
-                        status: ItemStatusSliverBox.inserting,
-                        height: 60.0,
-                        value: ToDo(text: 'hiep')));
-                globalKey.currentState?.animateInsert();
+                // int index = todos.indexOf(state);
+                // todos.insert(
+                //     index,
+                //     SliverBoxItemState<ToDo>(
+                //         single: false,
+                //         key: '${todoId++}',
+                //         status: ItemStatusSliverBox.insert,
+                //         height: 60.0,
+                //         value: ToDo(name: 'hiep')));
+                // globalKey.currentState?.animateInsert();
                 break;
               }
             case MenuSingleItem.remove:
@@ -216,12 +199,16 @@ class _TodoRowBoxState extends State<TodoRowBox> {
               }
             case MenuSingleItem.removeSelected:
               {
-                for (SliverBoxItemState<ToDo> s in todos) {
-                  if (s.value.selected) {
-                    s.status = ItemStatusSliverBox.remove;
+                final animalBox = ref.read(animalBoxProvider);
+                for (SliverBoxItemState<Animal> a in animalBox.selected) {
+                  if (a.value.selected) {
+                    a.status = ItemStatusSliverBox.remove;
                   }
                 }
-                globalKey.currentState?.animateRemove();
+                ref
+                    .read(animalBoxProvider.notifier)
+                    .setSliverStatus(SliverBoxAction.remove);
+                // globalKey.currentState?.animateRemove();
               }
           }
         },
