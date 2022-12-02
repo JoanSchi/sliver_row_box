@@ -1,5 +1,5 @@
 // ignore_for_file: public_member_api_docs, sort_constructors_first
-import 'package:example_sliver_row_box/state.dart';
+import 'package:example_sliver_row_box/animal_box_state.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sliver_row_box/sliver_item_row_insert_remove.dart';
@@ -26,18 +26,20 @@ class _TodoRowBoxState extends ConsumerState<TodoRowBox> {
   Widget build(BuildContext context) {
     final animalBox = ref.watch(animalBoxProvider);
 
-    return SliverRowBox<String, Animal>(
+    debugPrint('action ${animalBox.action}');
+
+    return SliverRowBox<String, AnimalBoxItem>(
       key: globalKey,
       sliverBoxAction: animalBox.consumeAction(),
       topList: [
         SliverBoxItemState(
             height: 75.0,
-            key: 'Todo',
-            value: 'Todo',
+            key: 'top',
+            value: 'top',
             status: ItemStatusSliverBox.completed,
             single: false)
       ],
-      itemList: animalBox.selected,
+      itemList: animalBox.list,
       bottomList: [
         SliverBoxItemState(
             height: 75.0,
@@ -57,10 +59,10 @@ class _TodoRowBoxState extends ConsumerState<TodoRowBox> {
       required int length,
       required SliverBoxItemState<String> state}) {
     Widget w;
-    if (state.key == 'Todo') {
+    if (state.key == 'top') {
       w = SliverRowItemBackground(
           radialTop: 36.0,
-          backgroundColor: Colors.blue[50],
+          backgroundColor: const Color(0xFFFFF8EA),
           child: Padding(
             padding: const EdgeInsets.all(8.0),
             child: Center(
@@ -73,12 +75,12 @@ class _TodoRowBoxState extends ConsumerState<TodoRowBox> {
     } else {
       w = SliverRowItemBackground(
           radialbottom: 36.0,
-          backgroundColor: Colors.blue[50],
+          backgroundColor: const Color(0xFFFFF8EA),
           child: Padding(
             padding: const EdgeInsets.all(8.0),
             child: Center(
               child: Material(
-                color: Colors.blue[600],
+                color: Colors.brown[600],
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16.0)),
                 child: InkWell(
@@ -93,71 +95,61 @@ class _TodoRowBoxState extends ConsumerState<TodoRowBox> {
           ));
     }
 
-    return Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8.0),
-        child: Center(
-            child: SizedBox(width: 450, height: state.height, child: w)));
+    return w;
   }
 
   Widget _buildItem(
       {Animation? animation,
       required int index,
       required int length,
-      required SliverBoxItemState<Animal> state}) {
-    return Center(
-        child: Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8.0),
-      child: SizedBox(
-        width: 450,
-        child: SliverRowItemBackground(
-          backgroundColor: Colors.blue[50],
-          child: InsertRemoveVisibleAnimatedSliverRowItem(
-            animation: animation,
-            key: Key('item_${state.key}'),
-            state: state,
-            child: SizedBox(
-                height: state.height,
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    const SizedBox(
-                      width: 8.0,
-                    ),
-                    Checkbox(
-                        value: state.value.selected,
-                        onChanged: (value) {
-                          setState(() {
-                            state.value.selected = value!;
-                          });
-                        }),
-                    const SizedBox(
-                      width: 8.0,
-                    ),
-                    Expanded(
-                        child: Text(
-                      state.value.name,
-                      style: const TextStyle(fontSize: 18.0),
-                    )),
-                    popupMenuItem(state),
-                    // IconButton(
-                    //     onPressed: () {
-                    //       for (var st in todos) {
-                    //         if (st.value.selected) {
-                    //           st.status = ItemStatusSliverBox.remove;
-                    //         }
-                    //       }
-                    //       globalKey.currentState?.animateRemove();
-                    //     },
-                    //     icon: const Icon(Icons.more_vert)),
-                    const SizedBox(
-                      width: 8.0,
-                    ),
-                  ],
+      required SliverBoxItemState<AnimalBoxItem> state}) {
+    return SliverRowItemBackground(
+      backgroundColor: const Color(0xFFFFF8EA),
+      child: InsertRemoveVisibleAnimatedSliverRowItem(
+        animation: animation,
+        key: Key('item_${state.key}'),
+        state: state,
+        child: SizedBox(
+            height: state.height,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                const SizedBox(
+                  width: 8.0,
+                ),
+                Checkbox(
+                    value: state.value.selected,
+                    onChanged: (value) {
+                      setState(() {
+                        state.value.selected = value!;
+                      });
+                    }),
+                const SizedBox(
+                  width: 8.0,
+                ),
+                Expanded(
+                    child: Text(
+                  state.value.name,
+                  style: const TextStyle(fontSize: 18.0),
                 )),
-          ),
-        ),
+                popupMenuItem(state),
+                // IconButton(
+                //     onPressed: () {
+                //       for (var st in todos) {
+                //         if (st.value.selected) {
+                //           st.status = ItemStatusSliverBox.remove;
+                //         }
+                //       }
+                //       globalKey.currentState?.animateRemove();
+                //     },
+                //     icon: const Icon(Icons.more_vert)),
+                const SizedBox(
+                  width: 8.0,
+                ),
+              ],
+            )),
       ),
-    ));
+    );
   }
 
   void add() {
@@ -172,7 +164,7 @@ class _TodoRowBoxState extends ConsumerState<TodoRowBox> {
     // globalKey.currentState?.animateInsert();
   }
 
-  popupMenuItem(SliverBoxItemState<Animal> state) {
+  popupMenuItem(SliverBoxItemState<AnimalBoxItem> state) {
     return PopupMenuButton<MenuSingleItem>(
         // Callback that sets the selected popup menu item.
         onSelected: (MenuSingleItem item) {
@@ -200,7 +192,7 @@ class _TodoRowBoxState extends ConsumerState<TodoRowBox> {
             case MenuSingleItem.removeSelected:
               {
                 final animalBox = ref.read(animalBoxProvider);
-                for (SliverBoxItemState<Animal> a in animalBox.selected) {
+                for (SliverBoxItemState<AnimalBoxItem> a in animalBox.list) {
                   if (a.value.selected) {
                     a.status = ItemStatusSliverBox.remove;
                   }

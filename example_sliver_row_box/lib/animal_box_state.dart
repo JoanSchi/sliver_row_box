@@ -1,5 +1,7 @@
 // ignore_for_file: public_member_api_docs, sort_constructors_first
-import 'package:example_sliver_row_box/bucket_list.dart';
+import 'dart:ui';
+
+import 'package:example_sliver_row_box/animal_az_list.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sliver_row_box/sliver_row_box.dart';
 
@@ -11,6 +13,18 @@ final animalBoxProvider =
 class AnimalBoxNotifier extends StateNotifier<AnimalBox> {
   AnimalBoxNotifier() : super(AnimalBox.from(animalsWithA));
 
+  selectedToRemove() {
+    for (var t in state.list) {
+      if (t.value.selected) {
+        t.status = ItemStatusSliverBox.remove;
+      }
+    }
+  }
+
+  insert(List<String> list) {
+    state.copyWith(action: SliverBoxAction.insert, list: state);
+  }
+
   setSliverStatus(SliverBoxAction action) {
     state = state.copyWith(action: action);
   }
@@ -18,8 +32,7 @@ class AnimalBoxNotifier extends StateNotifier<AnimalBox> {
 
 class AnimalBox {
   SliverBoxAction action = SliverBoxAction.nothing;
-  List<Animal> notSelected = [];
-  List<SliverBoxItemState<Animal>> selected = [];
+  List<SliverBoxItemState<AnimalBoxItem>> list = [];
   int id = 0;
 
   SliverBoxAction consumeAction() {
@@ -28,24 +41,29 @@ class AnimalBox {
     return consumedAction;
   }
 
+  void insert(List<String> list) {
+    this.list.addAll([
+      for (String name in list)
+        SliverBoxItemState<AnimalBoxItem>(
+            key: '${id++}', height: 60.0, value: AnimalBoxItem(name: name))
+    ]);
+  }
+
   AnimalBox({
     required this.action,
-    required this.notSelected,
-    required this.selected,
+    required this.list,
     required this.id,
   });
 
   AnimalBox.from(List<String> names) {
     final length = animalsWithA.length;
 
-    for (int i = 0; i < animalsWithA.length; i++) {
-      final a = Animal(index: i, name: animalsWithA[i]);
+    for (int i = 0; i < length; i++) {
+      final a = AnimalBoxItem(name: animalsWithA[i]);
 
-      if (i % 6 < 3) {
-        notSelected.add(a);
-      } else {
-        selected
-            .add(SliverBoxItemState<Animal>(key: '$i', height: 60.0, value: a));
+      if (!(i % 6 < 3)) {
+        list.add(SliverBoxItemState<AnimalBoxItem>(
+            key: '$i', height: 60.0, value: a));
       }
     }
     id = length;
@@ -53,26 +71,25 @@ class AnimalBox {
 
   AnimalBox copyWith({
     SliverBoxAction? action,
-    List<Animal>? notSelected,
-    List<SliverBoxItemState<Animal>>? selected,
+    List<AnimalBoxItem>? notSelected,
+    List<SliverBoxItemState<AnimalBoxItem>>? list,
     int? id,
   }) {
     return AnimalBox(
       action: action ?? this.action,
-      notSelected: notSelected ?? this.notSelected,
-      selected: selected ?? this.selected,
+      list: list ?? this.list,
       id: id ?? this.id,
     );
   }
 }
 
-class Animal {
+class AnimalBoxItem {
   bool selected;
-  int index;
+  Color? color;
   String name;
 
-  Animal({
-    required this.index,
+  AnimalBoxItem({
+    this.color,
     required this.name,
     this.selected = false,
   });

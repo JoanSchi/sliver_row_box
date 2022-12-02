@@ -69,7 +69,7 @@ class SliverRowBoxState<T, I> extends State<SliverRowBox<T, I>>
     if (widget.sliverBoxAction == SliverBoxAction.insert) {
       animateInsert();
     } else if (widget.sliverBoxAction == SliverBoxAction.remove) {
-      animateRemove();
+      _animateRemove();
     }
     super.didUpdateWidget(oldWidget);
   }
@@ -106,8 +106,10 @@ class SliverRowBoxState<T, I> extends State<SliverRowBox<T, I>>
     setState(() {});
   }
 
-  void animateRemove() {
-    if (_evaluateState()) {
+  void _animateRemove() {
+    final t = _evaluateState();
+    debugPrint('_animateRemove animate $t');
+    if (t) {
       animationController.value = 1.0;
 
       enableAnimation = animationController
@@ -124,8 +126,12 @@ class SliverRowBoxState<T, I> extends State<SliverRowBox<T, I>>
         }
       });
     }
+  }
 
-    setState(() {});
+  animateRemove() {
+    setState(() {
+      _animateRemove();
+    });
   }
 
   bool get isAnimating => _animationController?.isAnimating ?? false;
@@ -165,7 +171,8 @@ class SliverRowBoxState<T, I> extends State<SliverRowBox<T, I>>
     RenderSliverList? r = context.findRenderObject() as RenderSliverList?;
     double scrollOffset = r?.constraints.scrollOffset ?? 0.0;
     double viewportHeight = r?.constraints.viewportMainAxisExtent ?? 0.0;
-    debugPrint('geinig ${r?.constraints.scrollOffset}');
+    debugPrint(
+        'Evaluate scrollOffset: $scrollOffset, viewportHeight: $viewportHeight');
     double additionalHeight = 0.0;
 
     bool animationVisible = false;
