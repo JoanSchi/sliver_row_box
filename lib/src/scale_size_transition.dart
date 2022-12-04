@@ -111,7 +111,7 @@ class ScaledSize extends SingleChildRenderObjectWidget {
   @override
   void updateRenderObject(
       BuildContext context, ScaleResizedRender renderObject) {
-    renderObject..scale = scale;
+    renderObject.scale = scale;
   }
 }
 
@@ -137,24 +137,24 @@ class ScaleResizedRender extends RenderShiftedBox {
     if (child.parentData is! BoxParentData) child.parentData = BoxParentData();
   }
 
-  @override
-  double computeMinIntrinsicWidth(double height) {
-    return super.computeMinIntrinsicWidth(height);
-  }
+  // @override
+  // double computeMinIntrinsicWidth(double height) {
+  //   return super.computeMinIntrinsicWidth(height);
+  // }
 
   @override
   double computeMaxIntrinsicWidth(double height) {
-    return super.computeMaxIntrinsicWidth(height);
+    return super.computeMaxIntrinsicWidth(height) * _scale;
   }
 
-  @override
-  double computeMinIntrinsicHeight(double width) {
-    return super.computeMinIntrinsicHeight(width);
-  }
+  // @override
+  // double computeMinIntrinsicHeight(double width) {
+  //   return super.computeMinIntrinsicHeight(width);
+  // }
 
   @override
   double computeMaxIntrinsicHeight(double width) {
-    return super.computeMaxIntrinsicHeight(width);
+    return super.computeMaxIntrinsicHeight(width) * _scale;
   }
 
   @override

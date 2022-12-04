@@ -1,7 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.example.example_sliver_row_box">
    <application
-        android:label="example_sliver_row_box"
+        android:label="SliverRowBox"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

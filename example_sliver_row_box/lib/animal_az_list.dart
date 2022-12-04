@@ -353,7 +353,6 @@ const animalsWithA = [
   'Lobster',
   'Long-Eared Owl',
   'Lynx',
-  '',
   'Macaroni Penguin',
   'Macaw',
   'Magellanic Penguin',

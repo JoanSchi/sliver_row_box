@@ -8,11 +8,21 @@ enum ItemStatusSliverBox { insert, completed, remove, insertLater }
 
 enum SliverBoxAction { insert, remove, nothing }
 
+typedef IgnorePointer = void Function(bool ignore);
+
 typedef BuildSliverBox<I> = Widget Function(
     {Animation? animation,
     required int index,
     required int length,
     required SliverBoxItemState<I> state});
+
+Widget _empty(
+    {Animation? animation,
+    required int index,
+    required int length,
+    required SliverBoxItemState state}) {
+  return const SizedBox.shrink();
+}
 
 class SliverRowBox<T, I> extends StatefulWidget {
   final List<SliverBoxItemState<T>> topList;
@@ -23,17 +33,19 @@ class SliverRowBox<T, I> extends StatefulWidget {
   final EdgeInsets paddingItem;
   final Duration duration;
   final SliverBoxAction sliverBoxAction;
+  final IgnorePointer? ignorePointer;
 
   const SliverRowBox({
     Key? key,
-    required this.topList,
+    this.topList = const [],
     required this.itemList,
-    required this.bottomList,
+    this.bottomList = const [],
     required this.buildSliverBoxItem,
-    required this.buildSliverBoxTopBottom,
+    this.buildSliverBoxTopBottom = _empty,
     this.sliverBoxAction = SliverBoxAction.nothing,
     this.paddingItem = const EdgeInsets.symmetric(horizontal: 16.0),
     this.duration = const Duration(milliseconds: 300),
+    this.ignorePointer,
   }) : super(key: key);
 
   @override
@@ -48,8 +60,7 @@ class SliverRowBoxState<T, I> extends State<SliverRowBox<T, I>>
     with SingleTickerProviderStateMixin {
   AnimationController? _animationController;
   Animation<double>? enableAnimation;
-  bool maxItemsForAnimation = false;
-  int maxItemsDuringAnimation = -1;
+  bool ignorePointer = false;
 
   AnimationController get animationController => _animationController ??=
       AnimationController(vsync: this, duration: widget.duration);
@@ -66,11 +77,17 @@ class SliverRowBoxState<T, I> extends State<SliverRowBox<T, I>>
 
   @override
   void didUpdateWidget(SliverRowBox<T, I> oldWidget) {
-    if (widget.sliverBoxAction == SliverBoxAction.insert) {
-      animateInsert();
-    } else if (widget.sliverBoxAction == SliverBoxAction.remove) {
-      _animateRemove();
+    switch (widget.sliverBoxAction) {
+      case SliverBoxAction.insert:
+        _animateInsert();
+        break;
+      case SliverBoxAction.remove:
+        _animateRemove();
+        break;
+      case SliverBoxAction.nothing:
+        break;
     }
+
     super.didUpdateWidget(oldWidget);
   }
 
@@ -81,6 +98,12 @@ class SliverRowBoxState<T, I> extends State<SliverRowBox<T, I>>
   }
 
   void animateInsert() {
+    setState(() {
+      _animateInsert();
+    });
+  }
+
+  void _animateInsert() {
     if (_evaluateState()) {
       animationController.value = 0.0;
 
@@ -88,22 +111,21 @@ class SliverRowBoxState<T, I> extends State<SliverRowBox<T, I>>
         ..drive<double>(CurveTween(curve: Curves.easeInOut));
 
       animationController.forward().then((value) {
-        // animationController.removeListener(insertListener);
         for (SliverBoxItemState s in widget.itemList) {
           if (s.status == ItemStatusSliverBox.insert ||
               s.status == ItemStatusSliverBox.insertLater) {
             s.status = ItemStatusSliverBox.completed;
           }
         }
+        if (ignorePointer) {
+          ignorePointer = false;
+          widget.ignorePointer?.call(false);
+        }
         if (mounted) {
-          setState(() {
-            maxItemsForAnimation = false;
-          });
+          setState(() {});
         }
       });
     }
-
-    setState(() {});
   }
 
   void _animateRemove() {
@@ -144,18 +166,7 @@ class SliverRowBoxState<T, I> extends State<SliverRowBox<T, I>>
 
   @override
   Widget build(BuildContext context) {
-    // if (maxItemsForAnimation) {
-    //   if (r != null) {
-    //     final y = (r.parentData as SliverPhysicalParentData).paintOffset.dy;
-    //     final vieportHeight = r.constraints.viewportMainAxisExtent;
-    //     final height = vieportHeight * 1.25 - y;
-    //     maxItemsDuringAnimation = height ~/ widget.heightItem + 1;
-    //   }
-    //   debugPrint('Maximum items during animation $maxItemsForAnimation');
-    // } else {
-    //   maxItemsDuringAnimation = -1;
-    // }
-
+    // TODO: Modify/implement SliverFixedExtentList for speed
     return SliverList(
         delegate: _SliverBoxRowSliverChildDelegate<T, I>(
       buildItem: _buildItem,
@@ -163,7 +174,6 @@ class SliverRowBoxState<T, I> extends State<SliverRowBox<T, I>>
       topList: widget.topList,
       itemList: widget.itemList,
       bottomList: widget.bottomList,
-      maxItemsDuringAnimation: maxItemsDuringAnimation,
     ));
   }
 
@@ -243,6 +253,9 @@ class SliverRowBoxState<T, I> extends State<SliverRowBox<T, I>>
           if (end + additionalHeight >
               scrollOffset + correct + viewportHeight) {
             item.status = ItemStatusSliverBox.insertLater;
+
+            ignorePointer = true;
+            widget.ignorePointer?.call(true);
           }
           additionalHeight += itemHeight;
           animationVisible = true;
@@ -306,7 +319,6 @@ class _SliverBoxRowSliverChildDelegate<T, I> extends SliverChildDelegate {
   final List<SliverBoxItemState<T>> topList;
   final List<SliverBoxItemState<I>> itemList;
   final List<SliverBoxItemState<T>> bottomList;
-  final int maxItemsDuringAnimation;
 
   final Widget Function(
       {required BuildContext context,
@@ -326,7 +338,6 @@ class _SliverBoxRowSliverChildDelegate<T, I> extends SliverChildDelegate {
     required this.bottomList,
     required this.buildTopBottom,
     required this.buildItem,
-    required this.maxItemsDuringAnimation,
   });
 
   int skip = 0;
@@ -340,10 +351,6 @@ class _SliverBoxRowSliverChildDelegate<T, I> extends SliverChildDelegate {
     if (index == -1) {
       return null;
     }
-
-    // if (maxItemsDuringAnimation != -1 && itemLength > maxItemsDuringAnimation) {
-    //   itemLength = maxItemsDuringAnimation;
-    // }
 
     if (index < topLength) {
       return buildTopBottom(
@@ -367,7 +374,7 @@ class _SliverBoxRowSliverChildDelegate<T, I> extends SliverChildDelegate {
       }
     }
 
-    index -= itemLength + skip;
+    index -= itemLength - skip;
 
     if (index < bottomLength) {
       return buildTopBottom(
@@ -382,7 +389,17 @@ class _SliverBoxRowSliverChildDelegate<T, I> extends SliverChildDelegate {
 
   @override
   int? get estimatedChildCount =>
-      topList.length + itemList.length - skip + bottomList.length;
+      topList.length + itemList.length + bottomList.length;
+
+  @override
+  double? estimateMaxScrollOffset(
+    int firstIndex,
+    int lastIndex,
+    double leadingScrollOffset,
+    double trailingScrollOffset,
+  ) {
+    return null;
+  }
 
   @override
   bool shouldRebuild(SliverChildDelegate oldDelegate) {
@@ -393,6 +410,7 @@ class _SliverBoxRowSliverChildDelegate<T, I> extends SliverChildDelegate {
 class SliverBoxItemState<T> {
   ItemStatusSliverBox status;
   bool single;
+  bool editing;
   T value;
   String key;
   double height;
@@ -400,6 +418,7 @@ class SliverBoxItemState<T> {
   SliverBoxItemState({
     this.status = ItemStatusSliverBox.completed,
     this.single = false,
+    this.editing = false,
     required this.value,
     required this.key,
     required this.height,

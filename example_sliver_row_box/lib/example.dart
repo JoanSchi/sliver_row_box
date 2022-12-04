@@ -1,21 +1,25 @@
 // ignore_for_file: public_member_api_docs, sort_constructors_first
 import 'package:example_sliver_row_box/animal_box_state.dart';
+import 'package:example_sliver_row_box/animal_suggestion_state.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sliver_row_box/sized_sliver_box.dart';
 import 'package:sliver_row_box/sliver_item_row_insert_remove.dart';
 import 'package:sliver_row_box/sliver_row_box.dart';
 import 'package:sliver_row_box/sliver_row_item_background.dart';
 
-class TodoRowBox extends ConsumerStatefulWidget {
-  const TodoRowBox({super.key});
+class AnimalsAtoZ extends ConsumerStatefulWidget {
+  const AnimalsAtoZ({super.key});
 
   @override
-  ConsumerState<TodoRowBox> createState() => _TodoRowBoxState();
+  ConsumerState<AnimalsAtoZ> createState() => _TodoRowBoxState();
 }
 
-class _TodoRowBoxState extends ConsumerState<TodoRowBox> {
+class _TodoRowBoxState extends ConsumerState<AnimalsAtoZ> {
   final globalKey =
       const GlobalObjectKey<SliverRowBoxState>('SliverRowBox_bucketlist');
+
+  int newAnimal = 0;
 
   @override
   void initState() {
@@ -29,13 +33,16 @@ class _TodoRowBoxState extends ConsumerState<TodoRowBox> {
     debugPrint('action ${animalBox.action}');
 
     return SliverRowBox<String, AnimalBoxItem>(
+      ignorePointer: (bool ignore) {
+        debugPrint('Ignore pointer: $ignore');
+      },
       key: globalKey,
       sliverBoxAction: animalBox.consumeAction(),
       topList: [
         SliverBoxItemState(
             height: 75.0,
             key: 'top',
-            value: 'top',
+            value: 'Animals A-Z',
             status: ItemStatusSliverBox.completed,
             single: false)
       ],
@@ -80,14 +87,18 @@ class _TodoRowBoxState extends ConsumerState<TodoRowBox> {
             padding: const EdgeInsets.all(8.0),
             child: Center(
               child: Material(
-                color: Colors.brown[600],
+                color: const Color(0xFFE3C770),
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16.0)),
                 child: InkWell(
                   onTap: add,
-                  child: const Text(
-                    'add',
-                    style: TextStyle(fontSize: 24.0),
+                  child: const Padding(
+                    padding:
+                        EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
+                    child: Text(
+                      'add',
+                      style: TextStyle(fontSize: 18.0),
+                    ),
                   ),
                 ),
               ),
@@ -109,113 +120,117 @@ class _TodoRowBoxState extends ConsumerState<TodoRowBox> {
         animation: animation,
         key: Key('item_${state.key}'),
         state: state,
-        child: SizedBox(
+        child: SizedSliverBox(
             height: state.height,
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                const SizedBox(
-                  width: 8.0,
-                ),
-                Checkbox(
-                    value: state.value.selected,
-                    onChanged: (value) {
-                      setState(() {
-                        state.value.selected = value!;
-                      });
-                    }),
-                const SizedBox(
-                  width: 8.0,
-                ),
-                Expanded(
-                    child: Text(
-                  state.value.name,
-                  style: const TextStyle(fontSize: 18.0),
-                )),
-                popupMenuItem(state),
-                // IconButton(
-                //     onPressed: () {
-                //       for (var st in todos) {
-                //         if (st.value.selected) {
-                //           st.status = ItemStatusSliverBox.remove;
-                //         }
-                //       }
-                //       globalKey.currentState?.animateRemove();
-                //     },
-                //     icon: const Icon(Icons.more_vert)),
-                const SizedBox(
-                  width: 8.0,
-                ),
-              ],
-            )),
+            child:
+                state.editing ? EditAnimal(item: state) : animal(index, state)),
       ),
     );
   }
 
-  void add() {
-    // todos.add(SliverBoxItemState<ToDo>(
-    //     height: 60.0,
-    //     key: '${todoId++}',
-    //     value: ToDo(
-    //       name: 'blub',
-    //     ),
-    //     status: ItemStatusSliverBox.insert,
-    //     single: false));
-    // globalKey.currentState?.animateInsert();
+  Widget animal(index, state) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        const SizedBox(
+          width: 8.0,
+        ),
+        SizedBox(
+            width: state.height,
+            height: state.height,
+            child: Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Material(
+                  color: state.value.color,
+                  shape: const CircleBorder(),
+                  child: Checkbox(
+                      fillColor: MaterialStateProperty.resolveWith<Color>(
+                          (Set<MaterialState> states) {
+                        if (states.contains(MaterialState.disabled)) {
+                          return Colors.black;
+                        }
+                        return Colors.white;
+                      }),
+                      checkColor: state.value.color,
+                      shape: const CircleBorder(),
+                      value: state.value.selected,
+                      onChanged: (value) {
+                        setState(() {
+                          state.value.selected = value!;
+                        });
+                      }),
+                ))),
+        Expanded(
+            child: Text(
+          state.value.name,
+          style: const TextStyle(fontSize: 18.0),
+        )),
+        popupMenuItem(index, state),
+        const SizedBox(
+          width: 8.0,
+        ),
+      ],
+    );
   }
 
-  popupMenuItem(SliverBoxItemState<AnimalBoxItem> state) {
+  void add() {
+    ref.read(animalBoxProvider.notifier).insert(
+        SliverBoxItemState<AnimalBoxItem>(
+            key: 'newAnimal_${newAnimal++}',
+            height: 60,
+            editing: true,
+            single: false,
+            status: ItemStatusSliverBox.insert,
+            value: AnimalBoxItem(name: '', color: const Color(0xFFE3C770))));
+  }
+
+  popupMenuItem(int index, SliverBoxItemState<AnimalBoxItem> state) {
     return PopupMenuButton<MenuSingleItem>(
         // Callback that sets the selected popup menu item.
         onSelected: (MenuSingleItem item) {
           switch (item) {
             case MenuSingleItem.add:
               {
-                // int index = todos.indexOf(state);
-                // todos.insert(
-                //     index,
-                //     SliverBoxItemState<ToDo>(
-                //         single: false,
-                //         key: '${todoId++}',
-                //         status: ItemStatusSliverBox.insert,
-                //         height: 60.0,
-                //         value: ToDo(name: 'hiep')));
-                // globalKey.currentState?.animateInsert();
+                ref.read(animalBoxProvider.notifier).insert(
+                    SliverBoxItemState<AnimalBoxItem>(
+                        height: 60.0,
+                        single: false,
+                        editing: true,
+                        key: 'newAnimal_${newAnimal++}',
+                        value: AnimalBoxItem(
+                            name: '', color: const Color(0xFFFFE1E1))),
+                    index: index);
+
                 break;
               }
             case MenuSingleItem.remove:
               {
                 state.status = ItemStatusSliverBox.remove;
-                globalKey.currentState?.animateRemove();
-                break;
-              }
-            case MenuSingleItem.removeSelected:
-              {
-                final animalBox = ref.read(animalBoxProvider);
-                for (SliverBoxItemState<AnimalBoxItem> a in animalBox.list) {
-                  if (a.value.selected) {
-                    a.status = ItemStatusSliverBox.remove;
-                  }
-                }
                 ref
                     .read(animalBoxProvider.notifier)
                     .setSliverStatus(SliverBoxAction.remove);
-                // globalKey.currentState?.animateRemove();
+                ref.read(animalSuggestionProvider.notifier).insert(
+                    list: [state.value.name], action: SliverBoxAction.nothing);
+                break;
               }
+            case MenuSingleItem.edit:
+              state.editing = true;
+              ref.read(animalBoxProvider.notifier).update();
+              break;
           }
         },
         itemBuilder: (BuildContext context) => <PopupMenuEntry<MenuSingleItem>>[
               const PopupMenuItem<MenuSingleItem>(
                 value: MenuSingleItem.add,
-                child: Text('add'),
+                child: Text('insert'),
               ),
               const PopupMenuItem<MenuSingleItem>(
                 value: MenuSingleItem.remove,
                 child: Text('remove'),
               ),
               const PopupMenuItem<MenuSingleItem>(
-                value: MenuSingleItem.removeSelected,
-                child: Text('remove selected'),
+                value: MenuSingleItem.edit,
+                child: Text('edit'),
               ),
             ]);
   }
@@ -224,5 +239,55 @@ class _TodoRowBoxState extends ConsumerState<TodoRowBox> {
 enum MenuSingleItem {
   add,
   remove,
-  removeSelected,
+  edit,
+}
+
+class EditAnimal extends ConsumerStatefulWidget {
+  final SliverBoxItemState<AnimalBoxItem> item;
+
+  const EditAnimal({super.key, required this.item});
+
+  @override
+  ConsumerState<EditAnimal> createState() => _EditAnimalState();
+}
+
+class _EditAnimalState extends ConsumerState<EditAnimal> {
+  late final TextEditingController _textEditingController =
+      TextEditingController(text: widget.item.value.name);
+
+  @override
+  void dispose() {
+    _textEditingController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12.0),
+      child: Material(
+        color: widget.item.value.color,
+        shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.0)),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8.0),
+          child: Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _textEditingController,
+                  onSubmitted: (String? value) {
+                    widget.item
+                      ..editing = false
+                      ..value.name = value ?? '';
+                    ref.read(animalBoxProvider.notifier).update();
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }

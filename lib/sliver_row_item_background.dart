@@ -5,6 +5,7 @@ class SliverRowItemBackground extends StatelessWidget {
   final Color? backgroundColor;
   final double radialTop;
   final double radialbottom;
+  final double overlap;
 
   const SliverRowItemBackground({
     Key? key,
@@ -12,6 +13,7 @@ class SliverRowItemBackground extends StatelessWidget {
     this.backgroundColor,
     this.radialTop = 0.0,
     this.radialbottom = 0.0,
+    this.overlap = 0.5,
   }) : super(key: key);
 
   @override
@@ -26,7 +28,10 @@ class SliverRowItemBackground extends StatelessWidget {
         ? w
         : CustomPaint(
             painter: DrawSliverBackground(
-                color: bgc, radialTop: radialTop, radialBottom: radialbottom),
+                overlap: overlap,
+                color: bgc,
+                radialTop: radialTop,
+                radialBottom: radialbottom),
             child: w);
   }
 }
@@ -35,11 +40,13 @@ class DrawSliverBackground extends CustomPainter {
   final Color color;
   final double radialTop;
   final double radialBottom;
+  final double overlap;
 
   DrawSliverBackground({
     required this.color,
     required this.radialTop,
     required this.radialBottom,
+    required this.overlap,
   });
 
   @override
@@ -51,7 +58,7 @@ class DrawSliverBackground extends CustomPainter {
 
     if (radialTop == 0.0 && radialBottom == 0.0) {
       canvas.drawRect(
-          const Offset(0.0, -0.1) & size + const Offset(0.0, 0.1), paint);
+          Offset(0.0, -overlap) & size + Offset(0.0, overlap), paint);
     } else {
       double radialTopMax;
       double radialBottomMax;
@@ -67,7 +74,7 @@ class DrawSliverBackground extends CustomPainter {
 
       Rect rect = radialTop == 0.0
           ? Offset.zero & size
-          : const Offset(0.0, -0.1) & size + const Offset(0.0, 0.1);
+          : Offset(0.0, -overlap) & size + Offset(0.0, overlap);
 
       canvas.drawRRect(
           RRect.fromRectAndCorners(rect,
@@ -83,6 +90,7 @@ class DrawSliverBackground extends CustomPainter {
   bool shouldRepaint(DrawSliverBackground oldDelegate) {
     return color != oldDelegate.color ||
         radialTop != oldDelegate.radialTop ||
-        radialBottom != oldDelegate.radialBottom;
+        radialBottom != oldDelegate.radialBottom ||
+        overlap != oldDelegate.overlap;
   }
 }

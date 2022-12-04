@@ -13,27 +13,70 @@ final animalBoxProvider =
 class AnimalBoxNotifier extends StateNotifier<AnimalBox> {
   AnimalBoxNotifier() : super(AnimalBox.from(animalsWithA));
 
-  selectedToRemove() {
+  List<String> selectedToRemove() {
+    List<String> removed = [];
+
     for (var t in state.list) {
       if (t.value.selected) {
         t.status = ItemStatusSliverBox.remove;
+        removed.add(t.value.name);
       }
     }
+    return removed;
   }
 
-  insert(List<String> list) {
-    state.copyWith(action: SliverBoxAction.insert, list: state);
+  void insertList(
+      {required List<String> list,
+      Color color = const Color(0xFF80ba27),
+      SliverBoxAction action = SliverBoxAction.insert}) {
+    state.list.addAll([
+      for (String name in list)
+        SliverBoxItemState<AnimalBoxItem>(
+            key: '${name}_$color',
+            height: 60.0,
+            status: action == SliverBoxAction.insert
+                ? ItemStatusSliverBox.insert
+                : ItemStatusSliverBox.completed,
+            value: AnimalBoxItem(name: name, color: color))
+    ]);
+
+    state.list.sort((a, b) {
+      int c = a.value.name.toLowerCase().compareTo(b.value.name.toLowerCase());
+
+      if (c != 0) {
+        return c;
+      }
+      return (a.value.color?.value ?? 0) - (b.value.color?.value ?? 0);
+    });
+
+    state = state.copyWith(action: action);
+  }
+
+  void invertSelected() {
+    for (SliverBoxItemState<AnimalBoxItem> state in state.list) {
+      state.value.inverseSelected();
+    }
+    state = state.copyWith();
   }
 
   setSliverStatus(SliverBoxAction action) {
     state = state.copyWith(action: action);
+  }
+
+  insert(SliverBoxItemState<AnimalBoxItem> item, {int index = -1}) {
+    state = state.copyWith(
+        list: state.list..insert(index == -1 ? state.list.length : index, item),
+        action: SliverBoxAction.insert);
+  }
+
+  void update() {
+    state = state.copyWith();
   }
 }
 
 class AnimalBox {
   SliverBoxAction action = SliverBoxAction.nothing;
   List<SliverBoxItemState<AnimalBoxItem>> list = [];
-  int id = 0;
 
   SliverBoxAction consumeAction() {
     final consumedAction = action;
@@ -41,44 +84,32 @@ class AnimalBox {
     return consumedAction;
   }
 
-  void insert(List<String> list) {
-    this.list.addAll([
-      for (String name in list)
-        SliverBoxItemState<AnimalBoxItem>(
-            key: '${id++}', height: 60.0, value: AnimalBoxItem(name: name))
-    ]);
-  }
-
   AnimalBox({
     required this.action,
     required this.list,
-    required this.id,
   });
 
   AnimalBox.from(List<String> names) {
     final length = animalsWithA.length;
 
     for (int i = 0; i < length; i++) {
-      final a = AnimalBoxItem(name: animalsWithA[i]);
+      if (!(i % 6 < 2)) {
+        final a = AnimalBoxItem(
+            name: animalsWithA[i], color: const Color(0xFFE3C770));
 
-      if (!(i % 6 < 3)) {
         list.add(SliverBoxItemState<AnimalBoxItem>(
-            key: '$i', height: 60.0, value: a));
+            key: a.key, height: 60.0, value: a));
       }
     }
-    id = length;
   }
 
   AnimalBox copyWith({
     SliverBoxAction? action,
-    List<AnimalBoxItem>? notSelected,
     List<SliverBoxItemState<AnimalBoxItem>>? list,
-    int? id,
   }) {
     return AnimalBox(
       action: action ?? this.action,
       list: list ?? this.list,
-      id: id ?? this.id,
     );
   }
 }
@@ -93,4 +124,8 @@ class AnimalBoxItem {
     required this.name,
     this.selected = false,
   });
+
+  void inverseSelected() => selected = !selected;
+
+  String get key => '${name}_$color';
 }

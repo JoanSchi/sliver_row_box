@@ -1,4 +1,5 @@
 import 'package:example_sliver_row_box/animal_box_state.dart';
+import 'package:example_sliver_row_box/animal_suggestion_state.dart';
 import 'package:example_sliver_row_box/backdrop_state.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -39,6 +40,23 @@ class _State extends ConsumerState<BackDropAppbar> {
                     )),
         ),
         Positioned(
+          left: 8.0,
+          top: 8.0,
+          bottom: 8.0,
+          child: IconButton(
+              onPressed: () {
+                final drop = ref.read(dropBackdropProvider.notifier).state;
+                if (drop) {
+                  ref.read(animalSuggestionProvider.notifier).invertSelected();
+                } else {
+                  ref.read(animalBoxProvider.notifier).invertSelected();
+                }
+              },
+              icon: const Icon(
+                Icons.published_with_changes,
+              )),
+        ),
+        Positioned(
           right: 8.0,
           top: 8.0,
           bottom: 8.0,
@@ -61,9 +79,16 @@ class _State extends ConsumerState<BackDropAppbar> {
                         )),
                     IconButton(
                         onPressed: () {
-                          ref.read(animalBoxProvider.notifier)
-                            ..selectedToRemove()
-                            ..setSliverStatus(SliverBoxAction.remove);
+                          List<String> removed = ref
+                              .read(animalBoxProvider.notifier)
+                              .selectedToRemove();
+
+                          ref
+                              .read(animalBoxProvider.notifier)
+                              .setSliverStatus(SliverBoxAction.remove);
+
+                          ref.read(animalSuggestionProvider.notifier).insert(
+                              list: removed, action: SliverBoxAction.nothing);
                         },
                         icon: const Icon(
                           Icons.delete,
