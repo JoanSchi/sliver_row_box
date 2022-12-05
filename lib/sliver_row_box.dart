@@ -63,8 +63,20 @@ class SliverRowBoxState<T, I> extends State<SliverRowBox<T, I>>
   bool ignorePointer = false;
 
   AnimationController get animationController => _animationController ??=
-      AnimationController(vsync: this, duration: widget.duration);
+      AnimationController(vsync: this, duration: widget.duration)
+        ..addListener(() {
+          final position = scrollPostion;
 
+          if (position != null) {
+            if (position.pixels < position.minScrollExtent) {
+              position.jumpTo(position.minScrollExtent);
+            } else if (position.pixels > position.maxScrollExtent) {
+              position.jumpTo(position.maxScrollExtent);
+            }
+          }
+        });
+
+  ScrollPosition? scrollPostion;
   @override
   void initState() {
     super.initState();
@@ -73,6 +85,7 @@ class SliverRowBoxState<T, I> extends State<SliverRowBox<T, I>>
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    scrollPostion = Scrollable.of(context)?.position;
   }
 
   @override
@@ -129,9 +142,7 @@ class SliverRowBoxState<T, I> extends State<SliverRowBox<T, I>>
   }
 
   void _animateRemove() {
-    final t = _evaluateState();
-    debugPrint('_animateRemove animate $t');
-    if (t) {
+    if (_evaluateState()) {
       animationController.value = 1.0;
 
       enableAnimation = animationController
@@ -167,6 +178,7 @@ class SliverRowBoxState<T, I> extends State<SliverRowBox<T, I>>
   @override
   Widget build(BuildContext context) {
     // TODO: Modify/implement SliverFixedExtentList for speed
+
     return SliverList(
         delegate: _SliverBoxRowSliverChildDelegate<T, I>(
       buildItem: _buildItem,

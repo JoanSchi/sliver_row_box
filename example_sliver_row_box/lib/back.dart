@@ -5,6 +5,7 @@ import 'package:example_sliver_row_box/animal_suggestion_state.dart';
 import 'package:example_sliver_row_box/backdrop_state.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sliver_row_box/sized_sliver_box.dart';
 import 'package:sliver_row_box/sliver_item_row_insert_remove.dart';
 import 'package:sliver_row_box/sliver_row_box.dart';
 import 'package:sliver_row_box/sliver_row_item_background.dart';
@@ -125,12 +126,16 @@ class _BackState extends ConsumerState<Back> {
                         .read(animalSuggestionProvider.notifier)
                         .setSliverStatus(SliverBoxAction.remove);
 
+                    final backNotifier =
+                        ref.read(dropBackdropProvider.notifier);
+
                     Timer(const Duration(milliseconds: 100), () {
-                      ref.read(dropBackdropProvider.notifier).state = false;
+                      backNotifier.state = false;
                     });
 
+                    final animalNotifier = ref.read(animalBoxProvider.notifier);
                     Timer(const Duration(milliseconds: 300), () {
-                      ref.read(animalBoxProvider.notifier)
+                      animalNotifier
                         ..insertList(list: removed, color: color)
                         ..setSliverStatus(SliverBoxAction.insert);
                     });
@@ -157,7 +162,7 @@ class _BackState extends ConsumerState<Back> {
           animation: animation,
           key: Key('item_${state.key}'),
           state: state,
-          child: SizedBox(
+          child: SizedSliverBox(
               height: state.height,
               child: Row(children: [
                 const SizedBox(

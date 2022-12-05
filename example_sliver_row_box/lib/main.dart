@@ -1,6 +1,7 @@
 import 'package:example_sliver_row_box/backdrop_appbar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'about.dart';
 import 'back.dart';
 import 'backdrop.dart';
 import 'example.dart';
@@ -55,15 +56,21 @@ class MyHomePage extends StatefulWidget {
   State<MyHomePage> createState() => _MyHomePageState();
 }
 
-class _MyHomePageState extends State<MyHomePage> {
+class _MyHomePageState extends State<MyHomePage>
+    with SingleTickerProviderStateMixin {
+  late final TabController _tabController = TabController(
+      length: 2,
+      vsync: this,
+      animationDuration: const Duration(milliseconds: 200));
+
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
-      backgroundColor: Color.fromARGB(255, 247, 250, 241),
+    return Scaffold(
+      backgroundColor: const Color.fromARGB(255, 247, 250, 241),
       body: SafeArea(
         child: Backdrop(
-          appBar: BackDropAppbar(),
-          back: Center(
+          appBar: const BackDropAppbar(),
+          back: const Center(
             child: SizedBox(
               width: 900.0,
               child: Padding(
@@ -74,24 +81,52 @@ class _MyHomePageState extends State<MyHomePage> {
           ),
           body: Material(
             elevation: 2.0,
-            shape: RoundedRectangleBorder(
+            shape: const RoundedRectangleBorder(
               borderRadius: BorderRadius.only(
                   topLeft: Radius.circular(36.0),
                   topRight: Radius.circular(36.0)),
             ),
-            color: Color(0xFF80ba27),
-            child: Padding(
-              padding: EdgeInsets.symmetric(vertical: 16.0, horizontal: 16.0),
-              child: Center(
-                child: SizedBox(
-                  width: 900.0,
-                  child: ClipRRect(
-                      borderRadius: BorderRadius.all(Radius.circular(36.0)),
-                      child: CustomScrollView(
-                        slivers: [AnimalsAtoZ()],
-                      )),
+            color: const Color(0xFF80ba27),
+            clipBehavior: Clip.antiAlias,
+            child: Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                  child: TabBar(
+                      indicatorColor: const Color.fromARGB(255, 247, 250, 241),
+                      controller: _tabController,
+                      tabs: const [
+                        Tab(text: 'Animals A-Z'),
+                        Tab(text: 'About')
+                      ]),
                 ),
-              ),
+                Expanded(
+                  child: TabBarView(
+                    controller: _tabController,
+                    children: const [
+                      Padding(
+                        padding: EdgeInsets.all(8.0),
+                        child: Center(
+                          child: SizedBox(
+                            width: 900.0,
+                            child: ClipRRect(
+                                borderRadius:
+                                    BorderRadius.all(Radius.circular(36.0)),
+                                child: CustomScrollView(
+                                  slivers: [AnimalsAtoZ()],
+                                )),
+                          ),
+                        ),
+                      ),
+                      Padding(
+                        padding: EdgeInsets.all(8.0),
+                        child: Center(
+                            child: SizedBox(width: 900.0, child: About())),
+                      )
+                    ],
+                  ),
+                ),
+              ],
             ),
           ),
         ),

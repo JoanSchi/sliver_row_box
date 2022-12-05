@@ -72,7 +72,7 @@ class DrawSliverBackground extends CustomPainter {
         radialBottomMax = radialBottom;
       }
 
-      Rect rect = radialTop == 0.0
+      Rect rect = radialBottom == 0.0
           ? Offset.zero & size
           : Offset(0.0, -overlap) & size + Offset(0.0, overlap);
 

@@ -1,61 +1,34 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
 
 class SizedSliverBox extends SingleChildRenderObjectWidget {
-  /// Creates a fixed size box. The [width] and [height] parameters can be null
-  /// to indicate that the size of the box should not be constrained in
-  /// the corresponding dimension.
-  const SizedSliverBox({super.key, this.width, this.height, super.child});
+  const SizedSliverBox({super.key, required this.height, super.child});
 
-  /// If non-null, requires the child to have exactly this width.
-  final double? width;
-
-  /// If non-null, requires the child to have exactly this height.
-  final double? height;
+  final double height;
 
   @override
   RenderSizeSliverBox createRenderObject(BuildContext context) {
     return RenderSizeSliverBox(
-      additionalConstraints: _additionalConstraints,
+      height: height,
     );
-  }
-
-  BoxConstraints get _additionalConstraints {
-    return BoxConstraints.tightFor(width: width, height: height);
   }
 
   @override
   void updateRenderObject(
       BuildContext context, RenderSizeSliverBox renderObject) {
-    renderObject.additionalConstraints = _additionalConstraints;
-  }
-
-  @override
-  String toStringShort() {
-    final String type;
-    if (width == double.infinity && height == double.infinity) {
-      type = '${objectRuntimeType(this, 'SizedBox')}.expand';
-    } else if (width == 0.0 && height == 0.0) {
-      type = '${objectRuntimeType(this, 'SizedBox')}.shrink';
-    } else {
-      type = objectRuntimeType(this, 'SizedBox');
-    }
-    return key == null ? type : '$type-$key';
+    renderObject.height = height;
   }
 
   @override
   void debugFillProperties(DiagnosticPropertiesBuilder properties) {
     super.debugFillProperties(properties);
     final DiagnosticLevel level;
-    if ((width == double.infinity && height == double.infinity) ||
-        (width == 0.0 && height == 0.0)) {
+    if (height == double.infinity || height == 0.0) {
       level = DiagnosticLevel.hidden;
     } else {
       level = DiagnosticLevel.info;
     }
-    properties
-        .add(DoubleProperty('width', width, defaultValue: null, level: level));
+
     properties.add(
         DoubleProperty('height', height, defaultValue: null, level: level));
   }
@@ -67,93 +40,55 @@ class RenderSizeSliverBox extends RenderProxyBox {
   /// The [additionalConstraints] argument must not be null and must be valid.
   RenderSizeSliverBox({
     RenderBox? child,
-    required BoxConstraints additionalConstraints,
-  })  : assert(additionalConstraints.debugAssertIsValid()),
-        _additionalConstraints = additionalConstraints,
+    required double height,
+  })  : _height = height,
         super(child);
 
   /// Additional constraints to apply to [child] during layout.
-  BoxConstraints get additionalConstraints => _additionalConstraints;
-  BoxConstraints _additionalConstraints;
-  set additionalConstraints(BoxConstraints value) {
-    assert(value.debugAssertIsValid());
-    if (_additionalConstraints == value) {
+  double get height => _height;
+  double _height;
+  set height(double value) {
+    if (_height == value) {
       return;
     }
-    _additionalConstraints = value;
+    _height = value;
     markNeedsLayout();
   }
 
   @override
   double computeMinIntrinsicWidth(double height) {
-    if (_additionalConstraints.hasBoundedWidth &&
-        _additionalConstraints.hasTightWidth) {
-      return _additionalConstraints.minWidth;
-    }
-    final double width = super.computeMinIntrinsicWidth(height);
-    assert(width.isFinite);
-    if (!_additionalConstraints.hasInfiniteWidth) {
-      return _additionalConstraints.constrainWidth(width);
-    }
-    return width;
+    return super.computeMinIntrinsicWidth(height);
   }
 
   @override
   double computeMaxIntrinsicWidth(double height) {
-    if (_additionalConstraints.hasBoundedWidth &&
-        _additionalConstraints.hasTightWidth) {
-      return _additionalConstraints.minWidth;
-    }
-    final double width = super.computeMaxIntrinsicWidth(height);
-    assert(width.isFinite);
-    if (!_additionalConstraints.hasInfiniteWidth) {
-      return _additionalConstraints.constrainWidth(width);
-    }
-    return width;
+    return super.computeMaxIntrinsicWidth(height);
   }
 
   @override
   double computeMinIntrinsicHeight(double width) {
-    if (_additionalConstraints.hasBoundedHeight &&
-        _additionalConstraints.hasTightHeight) {
-      return _additionalConstraints.minHeight;
-    }
-    final double height = super.computeMinIntrinsicHeight(width);
-    assert(height.isFinite);
-    if (!_additionalConstraints.hasInfiniteHeight) {
-      return _additionalConstraints.constrainHeight(height);
-    }
-    return height;
+    return _height;
   }
 
   @override
   double computeMaxIntrinsicHeight(double width) {
-    if (_additionalConstraints.hasBoundedHeight &&
-        _additionalConstraints.hasTightHeight) {
-      return _additionalConstraints.minHeight;
-    }
-    final double height = super.computeMaxIntrinsicHeight(width);
-    assert(height.isFinite);
-    if (!_additionalConstraints.hasInfiniteHeight) {
-      return _additionalConstraints.constrainHeight(height);
-    }
-    return height;
+    final double max = super.computeMaxIntrinsicHeight(width);
+    return (max < height) ? max : _height;
   }
 
   @override
   void performLayout() {
     final BoxConstraints constraints = this.constraints;
     if (child != null) {
-      child!.layout(_additionalConstraints.enforce(constraints),
-          parentUsesSize: false);
+      child!.layout(constraints.tighten(height: height), parentUsesSize: false);
     }
 
-    size = Size(constraints.maxWidth, _additionalConstraints.maxHeight);
+    size = Size(constraints.maxWidth, _height);
   }
 
   @override
   Size computeDryLayout(BoxConstraints constraints) {
-    return Size(constraints.maxWidth, _additionalConstraints.maxHeight);
+    return Size(constraints.maxWidth, _height);
     // if (child != null) {
     //   return child!.getDryLayout(_additionalConstraints.enforce(constraints));
     // } else {
@@ -177,7 +112,6 @@ class RenderSizeSliverBox extends RenderProxyBox {
   @override
   void debugFillProperties(DiagnosticPropertiesBuilder properties) {
     super.debugFillProperties(properties);
-    properties.add(DiagnosticsProperty<BoxConstraints>(
-        'additionalConstraints', additionalConstraints));
+    properties.add(DiagnosticsProperty<double>('height', height));
   }
 }

@@ -69,7 +69,7 @@ class _TodoRowBoxState extends ConsumerState<AnimalsAtoZ> {
     if (state.key == 'top') {
       w = SliverRowItemBackground(
           radialTop: 36.0,
-          backgroundColor: const Color(0xFFFFF8EA),
+          backgroundColor: const Color.fromARGB(255, 247, 250, 241),
           child: Padding(
             padding: const EdgeInsets.all(8.0),
             child: Center(
@@ -82,7 +82,7 @@ class _TodoRowBoxState extends ConsumerState<AnimalsAtoZ> {
     } else {
       w = SliverRowItemBackground(
           radialbottom: 36.0,
-          backgroundColor: const Color(0xFFFFF8EA),
+          backgroundColor: const Color.fromARGB(255, 247, 250, 241),
           child: Padding(
             padding: const EdgeInsets.all(8.0),
             child: Center(
@@ -115,7 +115,7 @@ class _TodoRowBoxState extends ConsumerState<AnimalsAtoZ> {
       required int length,
       required SliverBoxItemState<AnimalBoxItem> state}) {
     return SliverRowItemBackground(
-      backgroundColor: const Color(0xFFFFF8EA),
+      backgroundColor: const Color.fromARGB(255, 247, 250, 241),
       child: InsertRemoveVisibleAnimatedSliverRowItem(
         animation: animation,
         key: Key('item_${state.key}'),
@@ -167,7 +167,7 @@ class _TodoRowBoxState extends ConsumerState<AnimalsAtoZ> {
         )),
         popupMenuItem(index, state),
         const SizedBox(
-          width: 8.0,
+          width: 16.0,
         ),
       ],
     );

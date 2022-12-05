@@ -93,7 +93,7 @@ class AnimalBox {
     final length = animalsWithA.length;
 
     for (int i = 0; i < length; i++) {
-      if (!(i % 6 < 2)) {
+      if (i % 6 < 2) {
         final a = AnimalBoxItem(
             name: animalsWithA[i], color: const Color(0xFFE3C770));
 

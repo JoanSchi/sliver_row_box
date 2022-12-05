@@ -22,12 +22,33 @@ class _BackdropState extends ConsumerState<Backdrop>
   late final AnimationController _animationController;
   late final Animation _easyInOutAnimation;
 
+  bool backVisible = false;
+  bool tapBackEnabled = false;
+
   @override
   void initState() {
+    bool drop = ref.read(dropBackdropProvider);
     _animationController = AnimationController(
-        value: ref.read(dropBackdropProvider) ? 1.0 : 0.0,
+        value: drop ? 1.0 : 0.0,
         vsync: this,
-        duration: const Duration(milliseconds: 200));
+        duration: const Duration(milliseconds: 200))
+      ..addStatusListener((status) {
+        bool oldBackVisible = backVisible;
+        bool oldTapBack = tapBackEnabled;
+        if (status == AnimationStatus.dismissed) {
+          backVisible = false;
+          tapBackEnabled = false;
+        } else if (status == AnimationStatus.completed) {
+          backVisible = true;
+          tapBackEnabled = true;
+        } else {
+          backVisible = true;
+          tapBackEnabled = false;
+        }
+        if (oldBackVisible != backVisible || oldTapBack != tapBackEnabled) {
+          setState(() {});
+        }
+      });
     super.initState();
 
     _easyInOutAnimation =
@@ -43,11 +64,13 @@ class _BackdropState extends ConsumerState<Backdrop>
   @override
   Widget build(BuildContext context) {
     ref.listen(dropBackdropProvider, (previous, next) {
-      if (next) {
-        _animationController.forward();
-      } else {
-        _animationController.reverse();
-      }
+      setState(() {
+        if (next) {
+          _animationController.forward();
+        } else {
+          _animationController.reverse();
+        }
+      });
     });
 
     return LayoutBuilder(
@@ -69,23 +92,36 @@ class _BackdropState extends ConsumerState<Backdrop>
                 right: 0.0,
                 height: appBarSize,
                 child: widget.appBar),
-            Positioned(
-              key: const Key('back'),
-              left: 0.0,
-              top: appBarSize,
-              right: 0.0,
-              bottom: appBarSize,
-              child: AnimatedBuilder(
-                  animation: _easyInOutAnimation,
-                  builder: ((context, child) => Opacity(
-                      opacity: _easyInOutAnimation.value, child: child)),
-                  child: widget.back),
-            ),
+            if (backVisible)
+              Positioned(
+                key: const Key('back'),
+                left: 0.0,
+                top: appBarSize,
+                right: 0.0,
+                bottom: appBarSize,
+                child: AnimatedBuilder(
+                    animation: _easyInOutAnimation,
+                    builder: ((context, child) => Opacity(
+                        opacity: _easyInOutAnimation.value, child: child)),
+                    child: widget.back),
+              ),
             PositionedTransition(
               key: const Key('body'),
               rect: layerAnimation,
               child: widget.body,
-            )
+            ),
+            if (tapBackEnabled)
+              Positioned(
+                  left: 0.0,
+                  right: 0.0,
+                  bottom: 0.0,
+                  height: appBarSize,
+                  child: GestureDetector(
+                    onTap: () {
+                      debugPrint('geiig ${_animationController.value}');
+                      ref.read(dropBackdropProvider.notifier).state = false;
+                    },
+                  ))
           ],
         );
       },

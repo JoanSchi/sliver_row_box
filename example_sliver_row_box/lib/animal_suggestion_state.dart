@@ -87,7 +87,7 @@ class AnimalSuggestion {
 
   AnimalSuggestion.from(List<String> names) {
     for (int i = 0; i < animalsWithA.length; i++) {
-      if (i % 6 < 3) {
+      if (!(i % 6 < 2)) {
         final a = AnimalSuggestionItem(name: animalsWithA[i]);
         list.add(SliverBoxItemState<AnimalSuggestionItem>(
             key: a.name,
